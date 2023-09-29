@@ -137,4 +137,5 @@ ui-tests/.yarn/*
 ui-tests/.pnp.*
 
 # Other files to not be uploaded
-C:\Users\jacop\Desktop\Anatomical_landmarks_eval_CNN\PUNTI DI REPERE CEFALOMETRIA.docx
+PUNTI DI REPERE CEFALOMETRIA.docx
+.vscode
