@@ -136,6 +136,6 @@ ui-tests/playwright-report
 ui-tests/.yarn/*
 ui-tests/.pnp.*
 
-# Other files to not be uploaded
+# other files to not be uploaded
 PUNTI DI REPERE CEFALOMETRIA.docx
 .vscode
