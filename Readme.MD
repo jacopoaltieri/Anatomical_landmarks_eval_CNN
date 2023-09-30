@@ -1,7 +1,7 @@
 # Identification of anatomical landmarks using CNN
 
 ## Introduction
-The task of this project is to develop a CNN to identify 14 anatomical landmarks from lateral cephalometric radiographs ([dataset link](https://drive.google.com/drive/folders/1c6Sp1uKYlwv4TCbHMv0JkLjFkdfkNPPB?usp=drive_link)).
+The task of this project is to develop a CNN to identify 14 anatomical landmarks from lateral cephalometric radiographs ([dataset link](https://drive.google.com/drive/folders/1c6Sp1uKYlwv4TCbHMv0JkLjFkdfkNPPB?usp=sharing)).
 
 ## Cephalometry principles
 To carry out cephalometry, the X-ray tube is placed at 1.5 meters away from the mid sagittal plane, while the detector is at 15 cm on the other side.
@@ -29,3 +29,6 @@ The 14 landmarks to be found by this network are listed below, ordered according
 
 ## Usage
 
+
+## Useful links
+* (Original dataset)[https://drive.google.com/drive/folders/1c6Sp1uKYlwv4TCbHMv0JkLjFkdfkNPPB?usp=sharing]
