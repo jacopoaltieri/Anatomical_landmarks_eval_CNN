@@ -137,6 +137,4 @@ ui-tests/.yarn/*
 ui-tests/.pnp.*
 
 # other files to not be uploaded
-PUNTI DI REPERE CEFALOMETRIA.docx
 .vscode
-dataset_teleradiografie_14punti
