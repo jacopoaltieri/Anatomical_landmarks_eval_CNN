@@ -16,10 +16,7 @@ import numpy as np
 import pandas as pd
 
 
-# input_path=input("Provide the path for the dataset: ")
-input_path = (
-    "dataset_teleradiografie_14punti"  # hard-coded for now to speed up the workflow
-)
+input_path=input("Provide the path for the dataset: ")
 
 print("Preprocessing started...")
 
@@ -52,7 +49,7 @@ matching = list(im.intersection(lab))
 
 # resizing the images and scaling the labels
 NEW_SIZE = 240
-print("Rescaling images and labels...")
+print("Rescaling images and labels to 240x240 pixels...")
 for i in tqdm(matching):
     with Image.open(input_path+"/"+i+".jpg").convert('RGB') as im:
         original_size=im.size
