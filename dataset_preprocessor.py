@@ -1,11 +1,11 @@
 """
 AUTHORS: Altieri J. , Mazzini V.
 
-This module will rearrange the dataset in the correct format in order for it to be fed to the NN; it will also resize all the images (and the coordinates)
+This module will rearrange the dataset in the correct format in order for it to be fed to the NN;
+it will also resize all the images (and their corresponding coordinates)
 The processed dataset will be stored in "processed_dataset" in your current working directory.
 
 You need to run this code only if working from the original dataset
-Note that any non-standardized data will have to be processed manually.
 """
 
 import glob
@@ -13,6 +13,7 @@ import os
 from tqdm import tqdm
 from PIL import Image
 import numpy as np
+import pandas as pd
 
 
 # input_path=input("Provide the path for the dataset: ")
@@ -20,10 +21,10 @@ input_path = (
     "dataset_teleradiografie_14punti"  # hard-coded for now to speed up the workflow
 )
 
-print("Starting the preprocessing...")
+print("Preprocessing started...")
 
 # Creating the directory tree
-print("creating the directory tree in the current wd...\n")
+print("Creating the directory tree in the current wd...")
 os.makedirs(os.getcwd() + "/processed_dataset/images", exist_ok=True)
 os.makedirs(os.getcwd() + "/processed_dataset/labels", exist_ok=True)
 
@@ -43,18 +44,30 @@ img_files = [
     if "-" not in file
 ]
 
+# finding the matching img-label pairs
 lab = set([os.path.splitext(x)[0] for x in label_files])
 im = set([os.path.splitext(x)[0] for x in img_files])
 matching = list(im.intersection(lab))
-print(len(matching))
+
 
 # resizing the images and scaling the labels
-SIZE = 240
-original_size=[]
-print("rescaling the images...")
+NEW_SIZE = 240
+print("Rescaling images and labels...")
 for i in tqdm(matching):
     with Image.open(input_path+"/"+i+".jpg").convert('RGB') as im:
-        original_size.append(im.size)
-        resized_image = im.resize((int(SIZE), int(SIZE)), Image.LANCZOS)
-        #resized_image.save(os.getcwd()+"/processed_dataset/images/"+i+".jpg", 'JPEG')
+        original_size=im.size
+        resized_image = im.resize((int(NEW_SIZE), int(NEW_SIZE)), Image.LANCZOS)
+        resized_image.save(os.getcwd()+"/processed_dataset/images/"+i+".jpg", 'JPEG')
 
+    scale_factor=NEW_SIZE/np.array(original_size)
+
+    path = input_path+"/"+i+".txt"
+    data = pd.read_csv(path, sep="[;,\\t]", engine="python")
+    coords = np.array(list(zip(data.loc[:, "X"], data.loc[:, "Y"])))
+    
+    coords *= scale_factor    # scale coordinates according to resize factor
+    with open(os.getcwd()+"/processed_dataset/labels/"+i+".txt", 'w') as f:
+        f.write("Landmark\tX\tY\n")
+        for i, (x,y) in enumerate(coords, start=1):
+            f.write(f"{i}\t{x}\t{y}\n")
+print('Preprocessing complete! The dataset in "'+os.getcwd()+'/processed_dataset" is ready to be used!')
