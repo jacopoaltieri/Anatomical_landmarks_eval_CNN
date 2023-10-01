@@ -28,6 +28,10 @@ The 14 landmarks to be found by this network are listed below, ordered according
 ## Repository organization
 
 ## Usage
+First run the following command to ensure that all the required packages are installed and up to date: `pip install -r .\requirements.txt`.
+
+Based on which dataset you decide to use, you may need some preliminary work:
+* **If working with the original dataset**: Extract the dataset and download the *dataset_preprocessor.py*. Run the python script, it will create the processed and rescaled dataset in your current working directory, ready to be fed to the CNN.
 
 
 ## Useful links
