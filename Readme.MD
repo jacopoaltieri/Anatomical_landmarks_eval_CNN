@@ -32,3 +32,4 @@ The 14 landmarks to be found by this network are listed below, ordered according
 
 ## Useful links
 * [Original dataset](https://drive.google.com/drive/folders/1c6Sp1uKYlwv4TCbHMv0JkLjFkdfkNPPB?usp=sharing)
+* [Processed dataset](https://drive.google.com/file/d/1b5PBYAQm500APmUFrpmd1U2fENg3asXZ/view?usp=sharing)
