@@ -31,9 +31,13 @@ The 14 landmarks to be found by this network are listed below, ordered according
 First run the following command to ensure that all the required packages are installed and up to date: `pip install -r .\requirements.txt`.
 
 Based on which dataset you decide to use, you may need some preliminary work:
-* **If working with the original dataset**: Extract the dataset and download the *dataset_preprocessor.py*. Run the python script, it will create the processed and rescaled dataset in your current working directory, ready to be fed to the CNN.
+* **If working with the original dataset**: Extract the dataset and download *dataset_preprocessor.py*. Run the python script, it will create the processed and rescaled dataset in your current working directory, ready to be fed to the CNN.
+  
+* **If you wish to do dataset augmentation**: Extract the **processed** dataset and download *dataset_augment.py*. Run the python script, it will create the augmented dataset in your current working directory, ready to be fed to the CNN.
 
+Note that both the "processed" and the "augmented" dataset have the same folder structure, so they can both be analyzed by the network.
 
 ## Useful links
 * [Original dataset](https://drive.google.com/drive/folders/1c6Sp1uKYlwv4TCbHMv0JkLjFkdfkNPPB?usp=sharing)
 * [Processed dataset](https://drive.google.com/file/d/1b5PBYAQm500APmUFrpmd1U2fENg3asXZ/view?usp=sharing)
+* [Augmented dataset](https://drive.google.com/file/d/1c7EFdm-p5a3cv4611V5BElwjzm9YnOeC/view?usp=sharing)
