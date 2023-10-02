@@ -53,7 +53,7 @@ print("Rescaling images and labels to 240x240 pixels...")
 for i, j in enumerate(tqdm(matching)):
     with Image.open(input_path+"/"+j+".jpg").convert('RGB') as im:
         original_size=im.size
-        resized_image = im.resize((int(NEW_SIZE), int(NEW_SIZE)), Image.LANCZOS)
+        resized_image = im.resize((int(NEW_SIZE), int(NEW_SIZE)))
         resized_image.save(os.getcwd()+"/processed_dataset/images/"+str(i)+".jpg", 'JPEG')
 
     scale_factor=NEW_SIZE/np.array(original_size)
