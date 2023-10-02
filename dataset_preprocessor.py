@@ -50,20 +50,20 @@ matching = list(im.intersection(lab))
 # resizing the images and scaling the labels
 NEW_SIZE = 240
 print("Rescaling images and labels to 240x240 pixels...")
-for i in tqdm(matching):
-    with Image.open(input_path+"/"+i+".jpg").convert('RGB') as im:
+for i, j in enumerate(tqdm(matching)):
+    with Image.open(input_path+"/"+j+".jpg").convert('RGB') as im:
         original_size=im.size
         resized_image = im.resize((int(NEW_SIZE), int(NEW_SIZE)), Image.LANCZOS)
-        resized_image.save(os.getcwd()+"/processed_dataset/images/"+i+".jpg", 'JPEG')
+        resized_image.save(os.getcwd()+"/processed_dataset/images/"+str(i)+".jpg", 'JPEG')
 
     scale_factor=NEW_SIZE/np.array(original_size)
 
-    path = input_path+"/"+i+".txt"
+    path = input_path+"/"+j+".txt"
     data = pd.read_csv(path, sep="[;,\\t]", engine="python")
     coords = np.array(list(zip(data.loc[:, "X"], data.loc[:, "Y"])))
     
     coords *= scale_factor    # scale coordinates according to resize factor
-    with open(os.getcwd()+"/processed_dataset/labels/"+i+".txt", 'w') as f:
+    with open(os.getcwd()+"/processed_dataset/labels/"+str(i)+".txt", 'w') as f:
         f.write("Landmark\tX\tY\n")
         for i, (x,y) in enumerate(coords, start=1):
             f.write(f"{i}\t{x}\t{y}\n")
