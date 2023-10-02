@@ -1,7 +1,7 @@
 # Identification of anatomical landmarks using CNN
 
 ## Introduction
-The task of this project is to develop a CNN to identify 14 anatomical landmarks from lateral cephalometric radiographs ([dataset link](https://drive.google.com/drive/folders/1c6Sp1uKYlwv4TCbHMv0JkLjFkdfkNPPB?usp=sharing)).
+The task of this project is to develop a CNN to identify 14 anatomical landmarks from lateral cephalometric radiographs.
 
 ## Cephalometry principles
 To carry out cephalometry, the X-ray tube is placed at 1.5 meters away from the mid sagittal plane, while the detector is at 15 cm on the other side.
@@ -26,17 +26,18 @@ The 14 landmarks to be found by this network are listed below, ordered according
 14. **Go, Gonion**: most posterior inferior point on angle of mandible. Can also be constructed by bisecting the angle formed by intersection of mandibular plane and ramus of mandible
 
 ## Repository organization
-
+* **preprocessing_scripts**: contains the preprocessor and the data augmentation scripts. Use them if you are willing to work with the original dataset or the non-augmented one. If you instead use the "final" dataset provided by us (third link at the bottom of the page), you can ignore this folder.
 ## Usage
 First run the following command to ensure that all the required packages are installed and up to date: `pip install -r .\requirements.txt`.
-
+### Preprocessing
 Based on which dataset you decide to use, you may need some preliminary work:
-* **If working with the original dataset**: Extract the dataset and download *dataset_preprocessor.py*. Run the python script, it will create the processed and rescaled dataset in your current working directory, ready to be fed to the CNN.
+* **If working with the original dataset**: Extract the dataset and download *preprocessing_scripts/dataset_preprocessor.py*. Run the python script, it will create the processed and rescaled dataset in your current working directory, ready to be fed to the CNN.
   
-* **If you wish to do dataset augmentation**: Extract the **processed** dataset and download *dataset_augment.py*. Run the python script, it will create the augmented dataset in your current working directory, ready to be fed to the CNN.
+* **If you wish to do dataset augmentation**: Extract the **processed** dataset and download *preprocessing_scripts/dataset_augment.py*. Run the python script, it will create the augmented dataset in your current working directory, ready to be fed to the CNN.
 
 Note that both the "processed" and the "augmented" dataset have the same folder structure, so they can both be analyzed by the network.
 
+### Network
 ## Useful links
 * [Original dataset](https://drive.google.com/drive/folders/1c6Sp1uKYlwv4TCbHMv0JkLjFkdfkNPPB?usp=sharing)
 * [Processed dataset](https://drive.google.com/file/d/1b5PBYAQm500APmUFrpmd1U2fENg3asXZ/view?usp=sharing)
