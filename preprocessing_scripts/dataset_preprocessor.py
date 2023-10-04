@@ -65,7 +65,7 @@ for i, j in enumerate(tqdm(matching)):
     # coords formatting according to YOLO guidelines
     norm_coords = (coords - np.min(coords))/(np.max(coords)-np.min(coords))
     with open(os.getcwd()+"/processed_dataset/labels/"+str(i)+".txt", 'w') as f:
-        f.write(f"0\t 0.5\t 0.5\t 1\t 1\t")
-        for (x,y) in coords:
-            f.write(f"{x}\t{y}")
+        f.write(f"0,0.5,0.5,1,1,")
+        for (x,y) in norm_coords:
+            f.write(f"{x},{y},")
 print('Preprocessing complete! The dataset in "'+os.getcwd()+'/processed_dataset" is ready to be used!')
