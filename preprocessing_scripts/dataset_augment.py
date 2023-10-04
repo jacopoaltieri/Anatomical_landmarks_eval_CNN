@@ -62,3 +62,4 @@ for i, n in enumerate(tqdm(img_files)):
         f.write(f"0,0.5,0.5,1,1,")
         for (x,y) in norm_coords:
             f.write(f"{x},{y},")
+print('Augmentation complete! The dataset in "'+os.getcwd()+'/augmented_dataset" is ready to be used!')
