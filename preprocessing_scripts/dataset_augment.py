@@ -15,6 +15,7 @@ import shutil
 import numpy as np
 from tqdm import tqdm
 
+NEW_SIZE = 240
 
 input_path=input("Provide the path for the dataset: ")
 
@@ -39,12 +40,14 @@ img_files = glob.glob("**/*.jpg", root_dir=input_path, recursive=True)
 # transform the images and save both the original and the augmented
 for i, n in enumerate(tqdm(img_files)):
     img = cv2.imread(input_path + "/" + n)
-    labels = pd.read_csv(
-        input_path + "/" + label_files[i], sep="[;,\\t]", engine="python"
-    )
-    landmarks = np.array(list(zip(labels.loc[:, "X"], labels.loc[:, "Y"])))
+    coord_file = pd.read_csv(
+        input_path + "/" + label_files[i], header=None)
+    x_columns = coord_file.iloc[:, 5::2].values.tolist()
+    y_columns = coord_file.iloc[:, 6::2].values.tolist()
+    coordinates = [list(pair) for pair in zip(*x_columns, *y_columns)]
+    scaled_coords = np.clip(np.array(coordinates)*NEW_SIZE,0,239)
 
-    transformed = transform(image=img, keypoints=landmarks)
+    transformed = transform(image=img, keypoints=scaled_coords)
     imgor= os.getcwd() + "/augmented_dataset/images/" + str(i) + ".jpg"
     imgaug = os.getcwd() + "/augmented_dataset/images/" + str(i) + "aug.jpg"
     cv2.imwrite(imgor, img)
@@ -53,7 +56,9 @@ for i, n in enumerate(tqdm(img_files)):
     labor = input_path + "/"+label_files[i]
     labaug = os.getcwd() + "/augmented_dataset/labels/" + str(i) + "aug.txt"
     shutil.copy(labor,os.getcwd() + "/augmented_dataset/labels/" + str(i) + ".txt")
+
+    norm_coords = np.array(transformed["keypoints"])/NEW_SIZE
     with open(labaug, "w") as f:
-        f.write("Landmark\tX\tY\n")
-        for i, (x, y) in enumerate(transformed["keypoints"]):
-            f.write(f"{i}\t{x}\t{y}\n")
+        f.write(f"0,0.5,0.5,1,1,")
+        for (x,y) in norm_coords:
+            f.write(f"{x},{y},")
