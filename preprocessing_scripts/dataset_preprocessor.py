@@ -62,9 +62,10 @@ for i, j in enumerate(tqdm(matching)):
     data = pd.read_csv(path, sep="[;,\\t]", engine="python")
     coords = np.array(list(zip(data.loc[:, "X"], data.loc[:, "Y"])))
     
-    coords *= scale_factor    # scale coordinates according to resize factor
+    # coords formatting according to YOLO guidelines
+    norm_coords = (coords - np.min(coords))/(np.max(coords)-np.min(coords))
     with open(os.getcwd()+"/processed_dataset/labels/"+str(i)+".txt", 'w') as f:
-        f.write("Landmark\tX\tY\n")
-        for i, (x,y) in enumerate(coords, start=1):
-            f.write(f"{i}\t{x}\t{y}\n")
+        f.write(f"0\t 0.5\t 0.5\t 1\t 1\t")
+        for (x,y) in coords:
+            f.write(f"{x}\t{y}")
 print('Preprocessing complete! The dataset in "'+os.getcwd()+'/processed_dataset" is ready to be used!')
