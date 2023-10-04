@@ -3,7 +3,7 @@ AUTHORS: Altieri J. , Mazzini V.
 
 This module will do data augmentation on the "processed dataset" by flipping the images and their respective coordinates and changing their brightness and contrast.
 It will keep the original folder structure, so that both the normal and the augmented dataset can be used in the CNN with the same implementation.
-The folder "augmented_dataset" in your current working directory will be created and contain both the original and the augmented dataset.
+The folder "augmented_dataset" in your current working directory will be created and contain both the original and the augmented images.
 """
 
 import os
@@ -41,7 +41,7 @@ img_files = glob.glob("**/*.jpg", root_dir=input_path, recursive=True)
 for i, n in enumerate(tqdm(img_files)):
     img = cv2.imread(input_path + "/" + n)
     coord_file = pd.read_csv(
-        input_path + "/" + label_files[i], header=None)
+        input_path + "/" + label_files[i],sep=" ", header=None)
     x_columns = coord_file.iloc[:, 5::2].values.tolist()
     y_columns = coord_file.iloc[:, 6::2].values.tolist()
     coordinates = [list(pair) for pair in zip(*x_columns, *y_columns)]
@@ -59,7 +59,7 @@ for i, n in enumerate(tqdm(img_files)):
 
     norm_coords = np.array(transformed["keypoints"])/NEW_SIZE
     with open(labaug, "w") as f:
-        f.write(f"0,0.5,0.5,1,1,")
+        f.write(f"0 0.5 0.5 1 1 ")
         for (x,y) in norm_coords:
-            f.write(f"{x},{y},")
+            f.write(f"{x} {y} ")
 print('Augmentation complete! The dataset in "'+os.getcwd()+'/augmented_dataset" is ready to be used!')

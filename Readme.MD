@@ -27,6 +27,21 @@ The 14 landmarks to be found by this network are listed below, ordered according
 
 ## Repository organization
 * **preprocessing_scripts**: contains the preprocessor and the data augmentation scripts. Use them if you are willing to work with the original dataset or the non-augmented one. If you instead use the "final" dataset provided by us (third link at the bottom of the page), you can ignore this folder.
+  
+## Dataset structure
+The dataset has to have a precise structure both in folder organization and keypoints labeling, in order to be correctly read by the YOLO net
+Note that both "processed" and "augmented" dataset already have the correct structure, but we will explain it anyway to allow everybody to change the processing pipeline independently.
+
+The main directory needs two subfolders called "images" and "labels" respectively. Each image in the dataset has a corresponding text file with the same name as the image file and the ".txt" extension.
+
+The labeling system is the [ultralytics YOLO format](https://docs.ultralytics.com/datasets/pose/):
+* Object class index: 0 (since we are not doing detection);
+* Object center coordinates: The x and y coordinates of the center of the object, normalized to be between 0 and 1. In our case both 0.5;
+* Object width and height: The width and height of the object, normalized to be between 0 and 1. In our case both 1;
+* Object keypoint coordinates: The keypoints of the object, normalized to be between 0 and 1. In our case 14 xy pairs.
+Here is an example of the label format for pose estimation task:
+
+`0 0.5 0.5 1 1 px1 py1 px2 py2 ... px14 py14`
 ## Usage
 First run the following command to ensure that all the required packages are installed and up to date: `pip install -r .\requirements.txt`.
 ### Preprocessing
