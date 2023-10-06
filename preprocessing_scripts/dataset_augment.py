@@ -1,7 +1,7 @@
 """
 AUTHORS: Altieri J. , Mazzini V.
 
-This module will do data augmentation on the "processed dataset" by flipping the images and their respective coordinates and changing their brightness and contrast.
+This module will do data augmentation on the "augmented dataset" by flipping the images and their respective coordinates and changing their brightness and contrast.
 It will keep the original folder structure, so that both the normal and the augmented dataset can be used in the CNN with the same implementation.
 The folder "augmented_dataset" in your current working directory will be created and contain both the original and the augmented images.
 """
@@ -15,14 +15,23 @@ import shutil
 import numpy as np
 from tqdm import tqdm
 
-NEW_SIZE = 240
+NEW_SIZE = 240  # new image size (chosen to be the minimum of the original sizes)
+TRAIN_PERC = 0.75 # percentage of data to put in train set, the other will go in validation
 
+# function to write coords according to YOLO guidelines
+def write_coords(coords):
+    f.write(f"0 0.5 0.5 1 1 ")
+    for (x,y) in coords:
+        f.write(f"{x} {y} ")
+        
+        
 input_path=input("Provide the path for the dataset: ")
 
 print("Dataset augmentation started...")
-os.makedirs(os.getcwd()+"/augmented_dataset/images/", exist_ok=True)
-os.makedirs(os.getcwd()+"/augmented_dataset/labels/", exist_ok=True)
-
+os.makedirs(os.getcwd() + "/augmented_dataset/images/train", exist_ok=True)
+os.makedirs(os.getcwd() + "/augmented_dataset/images/test", exist_ok=True)
+os.makedirs(os.getcwd() + "/augmented_dataset/labels/train", exist_ok=True)
+os.makedirs(os.getcwd() + "/augmented_dataset/labels/test", exist_ok=True)
 # transformation pipeline: a flip (hor,vert or both) and a brightness/contrast change
 transform = alb.Compose(
     [
@@ -48,15 +57,24 @@ for i, n in enumerate(tqdm(img_files)):
     scaled_coords = np.clip(np.array(coordinates)*NEW_SIZE,0,239)
 
     transformed = transform(image=img, keypoints=scaled_coords)
-    imgor= os.getcwd() + "/augmented_dataset/images/" + str(i) + ".jpg"
-    imgaug = os.getcwd() + "/augmented_dataset/images/" + str(i) + "aug.jpg"
+    if i<int(len(img_files)*TRAIN_PERC):        
+        imgor= os.getcwd() + "/augmented_dataset/images/train/" + str(i) + ".jpg"
+        imgaug = os.getcwd() + "/augmented_dataset/images/train/" + str(i) + "aug.jpg"
+    else:
+        imgor= os.getcwd() + "/augmented_dataset/images/test/" + str(i) + ".jpg"
+        imgaug = os.getcwd() + "/augmented_dataset/images/test/" + str(i) + "aug.jpg"   
     cv2.imwrite(imgor, img)
     cv2.imwrite(imgaug, transformed["image"])
 
     labor = input_path + "/"+label_files[i]
-    labaug = os.getcwd() + "/augmented_dataset/labels/" + str(i) + "aug.txt"
-    shutil.copy(labor,os.getcwd() + "/augmented_dataset/labels/" + str(i) + ".txt")
+    if i<int(len(img_files)*TRAIN_PERC):        
+        labaug = os.getcwd() + "/augmented_dataset/labels/train/" + str(i) + "aug.txt"
+        shutil.copy(labor,os.getcwd() + "/augmented_dataset/labels/train/" + str(i) + ".txt")
+    else:
+        labaug = os.getcwd() + "/augmented_dataset/labels/test/" + str(i) + "aug.txt"
+        shutil.copy(labor,os.getcwd() + "/augmented_dataset/labels/test/" + str(i) + ".txt")
 
+        
     norm_coords = np.array(transformed["keypoints"])/NEW_SIZE
     with open(labaug, "w") as f:
         f.write(f"0 0.5 0.5 1 1 ")
