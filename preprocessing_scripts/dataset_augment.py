@@ -77,7 +77,5 @@ for i, n in enumerate(tqdm(img_files)):
         
     norm_coords = np.array(transformed["keypoints"])/NEW_SIZE
     with open(labaug, "w") as f:
-        f.write(f"0 0.5 0.5 1 1 ")
-        for (x,y) in norm_coords:
-            f.write(f"{x} {y} ")
+        write_coords(norm_coords)
 print('Augmentation complete! The dataset in "'+os.getcwd()+'/augmented_dataset" is ready to be used!')
