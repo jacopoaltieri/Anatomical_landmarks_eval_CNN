@@ -27,6 +27,7 @@ The 14 landmarks to be found by this network are listed below, ordered according
 
 ## Repository organization
 * **preprocessing_scripts**: contains the preprocessor and the data augmentation scripts. Use them if you are willing to work with the original dataset or the non-augmented one. If you instead use the "final" dataset provided by us (third link at the bottom of the page), you can ignore this folder.
+* **NN**: contains the network, the pre-trained model and its configuration file.
   
 ## Dataset structure
 The dataset has to have a precise structure both in folder organization and keypoints labeling, in order to be correctly read by the YOLO net
@@ -49,10 +50,12 @@ Based on which dataset you decide to use, you may need some preliminary work:
 * **If working with the original dataset**: Extract the dataset and download *preprocessing_scripts/dataset_preprocessor.py*. Run the python script, it will create the processed and rescaled dataset in your current working directory, ready to be fed to the CNN.
   
 * **If you wish to do dataset augmentation**: Extract the **processed** dataset and download *preprocessing_scripts/dataset_augment.py*. Run the python script, it will create the augmented dataset in your current working directory, ready to be fed to the CNN.
-
 Note that both the "processed" and the "augmented" dataset have the same folder structure, so they can both be analyzed by the network.
 
 ### Network
+* Download the content of the **NN** folder on your PC.
+* Download and extract the dataset on your PC, then put its path into the *path* variable of the config.yaml file
+* Run *YOLO_NN.ipynb*
 ## Useful links
 * [Original dataset](https://drive.google.com/drive/folders/1c6Sp1uKYlwv4TCbHMv0JkLjFkdfkNPPB?usp=sharing)
 * [Processed dataset](https://drive.google.com/file/d/1b5PBYAQm500APmUFrpmd1U2fENg3asXZ/view?usp=sharing)
