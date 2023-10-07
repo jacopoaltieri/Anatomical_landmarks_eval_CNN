@@ -54,6 +54,6 @@ Note that both the "processed" and the "augmented" dataset have the same folder 
 
 ### Network
 ## Useful links
-* [Original dataset](https://drive.google.com/drive/folders/1c6Sp1uKYlwv4TCbHMv0JkLjFkdfkNPPB?usp=sharing)
+* [Original dataset](https://drive.google.com/file/d/1c6zAOMGOXeI8-PzsOXNV0kaRDOX9jGsg/view?usp=sharing)
 * [Processed dataset](https://drive.google.com/file/d/1b5PBYAQm500APmUFrpmd1U2fENg3asXZ/view?usp=sharing)
 * [Augmented dataset](https://drive.google.com/file/d/1c7EFdm-p5a3cv4611V5BElwjzm9YnOeC/view?usp=sharing)
