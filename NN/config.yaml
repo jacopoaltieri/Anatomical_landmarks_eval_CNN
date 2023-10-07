@@ -1,0 +1,15 @@
+task: pose
+
+# Data
+path: C:/Users/vitto/Desktop/DL project/DL project github/augmented_dataset/augmented_dataset
+train : images/train
+val: images/test
+
+# Keypoints
+kpt_shape: [14,2]
+
+augment: False #prevents additional augmentation to avoid messing with our own 
+
+# Classes
+names:
+  0: craniography
