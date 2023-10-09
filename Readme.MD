@@ -31,7 +31,6 @@ The 14 landmarks to be found by this network are listed below, ordered according
   
 ## Dataset structure
 The dataset has to have a precise structure both in folder organization and keypoints labeling, in order to be correctly read by the YOLO net
-Note that both "processed" and "augmented" dataset already have the correct structure, but we will explain it anyway to allow everybody to change the processing pipeline independently.
 
 The main directory needs two subfolders called "images" and "labels" respectively. Each image in the dataset has a corresponding text file with the same name as the image file and the ".txt" extension.
 
@@ -56,7 +55,4 @@ Note that both the "processed" and the "augmented" dataset have the same folder 
 * Download the content of the **NN** folder on your PC.
 * Download and extract the dataset on your PC, then put its path into the *path* variable of the config.yaml file
 * Run *YOLO_NN.ipynb*
-## Useful links
-* [Original dataset](https://drive.google.com/file/d/1c6zAOMGOXeI8-PzsOXNV0kaRDOX9jGsg/view?usp=sharing)
-* [Processed dataset](https://drive.google.com/file/d/1b5PBYAQm500APmUFrpmd1U2fENg3asXZ/view?usp=sharing)
-* [Augmented dataset](https://drive.google.com/file/d/1c7EFdm-p5a3cv4611V5BElwjzm9YnOeC/view?usp=sharing)
+
