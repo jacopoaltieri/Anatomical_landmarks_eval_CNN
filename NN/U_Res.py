@@ -14,16 +14,22 @@ import glob
 from tqdm import tqdm
 import cv2
 
-from keras import backend as keras
-from keras.layers import Input,Conv2D, MaxPooling2D,Dropout, LeakyReLU, concatenate
-from keras.optimizers import Adam
-from keras import Model
+from tensorflow import keras 
+from tensorflow.python.keras.layers import Input,Conv2D, MaxPooling2D,Dropout, LeakyReLU,UpSampling2D, concatenate
+from tensorflow.python.keras.optimizers import adam_v2
+from tensorflow.python.keras import Model 
 
-# U-Net backbone
-def unet(pretrained_weights = None,input_size = (240,240,1)):
+##################################################################
+#                        U-Net backbone                          #
+##################################################################
+ndim = 2
+unet_input_features = 2 #(f)ixed and (m)oving image
+input_shape = (240,240, unet_input_features)
+
+
+def unet(pretrained_weights = None, input_size = (240,240, 2,)):
     inputs = Input(input_size)
     conv1 = Conv2D(64, 3, activation = LeakyReLU(alpha=0.01), padding = 'same', kernel_initializer = 'he_normal')(inputs)
-    conv1 = Conv2D(64, 3, activation = LeakyReLU(alpha=0.01), padding = 'same', kernel_initializer = 'he_normal')(conv1)
     pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
     conv2 = Conv2D(128, 3, activation = LeakyReLU(alpha=0.01), padding = 'same', kernel_initializer = 'he_normal')(pool1)
     conv2 = Conv2D(128, 3, activation = LeakyReLU(alpha=0.01), padding = 'same', kernel_initializer = 'he_normal')(conv2)
@@ -64,21 +70,20 @@ def unet(pretrained_weights = None,input_size = (240,240,1)):
 
     model = Model(input = inputs, output = conv10)
 
-    model.compile(optimizer = Adam(lr = 1e-4), loss = 'binary_crossentropy', metrics = ['accuracy'])
-    
-    #model.summary()
+    model.compile(optimizer = adam_v2(lr = 1e-4), loss = 'binary_crossentropy', metrics = ['accuracy'])
+    print(model.shape())
 
-    if(pretrained_weights):
-    	model.load_weights(pretrained_weights)
-    
-    return(model)
+    if(pretrained_weights): model.load_weights(pretrained_weights)
+    return model
 
+unet()
 # Write here your dataset path
 PATH = r"C:\Users\jacop\Desktop\DL_Project\processed_dataset"
 
 images = glob.glob("**/*.jpg", root_dir=PATH, recursive=True)
-images = glob.glob("**/*.txt", root_dir=PATH, recursive=True)
+labels = glob.glob("**/*.txt", root_dir=PATH, recursive=True)
 
+# load images in memory and normalize them
 for image in images:
-    pass
-    
+    img = cv2.imread(PATH+'/'+image,0)
+    im_normalized = cv2.normalize(img, None, 0, 1.0, cv2.NORM_MINMAX, dtype=cv2.CV_32F)
