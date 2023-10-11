@@ -16,14 +16,7 @@ import numpy as np
 import pandas as pd
 
 
-NEW_SIZE = 240  # new image size (chosen to be the minimum of the original sizes)
-TRAIN_PERC = 0.75 # percentage of data to put in train set, the other will go in validation
-
-# function to write coords according to YOLO guidelines
-def write_coords(coords):
-    f.write(f"0 0.5 0.5 1 1 ")
-    for (x,y) in coords:
-        f.write(f"{x} {y} ")
+TRAIN_PERC = 0.75 # percentage of data to put in train set, the rest will go in validation
 
 
 input_path=input("Provide the path for the dataset: ")
@@ -32,10 +25,10 @@ print("Preprocessing started...")
 
 # Creating the directory tree
 print("Creating the directory tree in the current wd...")
-os.makedirs(os.getcwd() + "/processed_dataset/images/train", exist_ok=True)
-os.makedirs(os.getcwd() + "/processed_dataset/images/test", exist_ok=True)
-os.makedirs(os.getcwd() + "/processed_dataset/labels/train", exist_ok=True)
-os.makedirs(os.getcwd() + "/processed_dataset/labels/test", exist_ok=True)
+os.makedirs(os.getcwd() + "/processed_dataset1/images/train", exist_ok=True)
+os.makedirs(os.getcwd() + "/processed_dataset1/images/test", exist_ok=True)
+os.makedirs(os.getcwd() + "/processed_dataset1/labels/train", exist_ok=True)
+os.makedirs(os.getcwd() + "/processed_dataset1/labels/test", exist_ok=True)
 
 
 # listing and matching images and labels
@@ -59,28 +52,25 @@ im = set([os.path.splitext(x)[0] for x in img_files])
 matching = list(im.intersection(lab))
 
 
-# resizing the images and scaling the labels
-print("Rescaling images to 240x240 pixels...")
 for i, j in enumerate(tqdm(matching)):
     with Image.open(input_path+"/"+j+".jpg").convert('RGB') as im:
-        original_size=im.size
-        resized_image = im.resize((int(NEW_SIZE), int(NEW_SIZE)))
         if i<int(len(matching)*TRAIN_PERC):        
-            resized_image.save(os.getcwd()+"/processed_dataset/images/train/"+str(i)+".jpg", 'JPEG')
+            im.save(os.getcwd()+"/processed_dataset1/images/train/"+str(i)+".jpg", 'JPEG')
         else:
-             resized_image.save(os.getcwd()+"/processed_dataset/images/test/"+str(i)+".jpg", 'JPEG')
+             im.save(os.getcwd()+"/processed_dataset1/images/test/"+str(i)+".jpg", 'JPEG')
            
-    #scale_factor=NEW_SIZE/np.array(original_size)  # no need to rescale for the YOLO labelling format
-
     path = input_path+"/"+j+".txt"
     data = pd.read_csv(path, sep="[;,\\t]", engine="python")
     coords = np.array(list(zip(data.loc[:, "X"], data.loc[:, "Y"])))
-    norm_coords = (coords - np.min(coords))/(np.max(coords)-np.min(coords))
 
     if i<int(len(matching)*TRAIN_PERC):        
-        with open(os.getcwd()+"/processed_dataset/labels/train/"+str(i)+".txt", 'w') as f:
-            write_coords(norm_coords)
+        with open(os.getcwd()+"/processed_dataset1/labels/train/"+str(i)+".txt", 'w') as f:
+            f.write("Landmark\tX\tY\n")
+            for i, (x,y) in enumerate(coords, start=1):
+                f.write(f"{i}\t{x}\t{y}\n")
     else:
-        with open(os.getcwd()+"/processed_dataset/labels/test/"+str(i)+".txt", 'w') as f:
-            write_coords(norm_coords)
+        with open(os.getcwd()+"/processed_dataset1/labels/test/"+str(i)+".txt", 'w') as f:
+            f.write("Landmark\tX\tY\n")
+            for i, (x,y) in enumerate(coords, start=1):
+                f.write(f"{i}\t{x}\t{y}\n")
 print('Preprocessing complete! The dataset in "'+os.getcwd()+'/processed_dataset" is ready to be used!')
