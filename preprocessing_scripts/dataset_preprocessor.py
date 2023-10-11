@@ -2,7 +2,7 @@
 AUTHORS: Altieri J. , Mazzini V.
 
 This module will rearrange the dataset in the correct format in order for it to be fed to the NN;
-it will also resize all the images (and their corresponding coordinates)
+There is no need to resize the images sinche it will be automatically done by the NN itself.
 The processed dataset will be stored in "processed_dataset" in your current working directory.
 
 You need to run this code only if working from the original dataset
