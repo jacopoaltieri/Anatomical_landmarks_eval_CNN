@@ -51,17 +51,27 @@ for filename in os.listdir(input_path):
         old_filepath = os.path.join(input_path, filename)
         new_filepath = os.path.join(input_path, new_filename)
 
+# Define a function to count lines in a file
+def count_lines(filename):
+    with open(filename, 'r') as file:
+        return sum(1 for line in file)
+    
 label_files = glob.glob("**/*[!README].txt", root_dir=input_path, recursive=True)
+label_files = [file for file in label_files if count_lines(input_path+"/"+file) == 15]
+
 img_files = [
     file
     for file in glob.glob("**/*.jpg", root_dir=input_path, recursive=True)
     if "-" not in file
 ]
 
+
+    
 # finding the matching img-label pairs
 lab = set([os.path.splitext(x)[0] for x in label_files])
 im = set([os.path.splitext(x)[0] for x in img_files])
 matching = list(im.intersection(lab))
+print(f"Found {len(matching)} image-label pairs")
 
 # resizing the images and scaling the labels
 print("Rescaling images to 256x256 pixels...")
