@@ -26,33 +26,18 @@ The 14 landmarks to be found by this network are listed below, ordered according
 14. **Go, Gonion**: most posterior inferior point on angle of mandible. Can also be constructed by bisecting the angle formed by intersection of mandibular plane and ramus of mandible
 
 ## Repository organization
-* **preprocessing_scripts**: contains the preprocessor and the data augmentation scripts. Use them if you are willing to work with the original dataset or the non-augmented one. If you instead use the "final" dataset provided by us (third link at the bottom of the page), you can ignore this folder.
+* **preprocessing_scripts**: contains the preprocessor script: use it if you are willing to work with the original dataset. It will find all the matching image-label pairs and sort them into three categories (train, test, val).
 * **NN**: contains the network, the pre-trained model and its configuration file.
   
 ## Dataset structure
-The dataset has to have a precise structure both in folder organization and keypoints labeling, in order to be correctly read by the YOLO net
-
 The main directory needs two subfolders called "images" and "labels" respectively. Each image in the dataset has a corresponding text file with the same name as the image file and the ".txt" extension.
 
-The labeling system is the [ultralytics YOLO format](https://docs.ultralytics.com/datasets/pose/):
-* Object class index: 0 (since we are not doing detection);
-* Object center coordinates: The x and y coordinates of the center of the object, normalized to be between 0 and 1. In our case both 0.5;
-* Object width and height: The width and height of the object, normalized to be between 0 and 1. In our case both 1;
-* Object keypoint coordinates: The keypoints of the object, normalized to be between 0 and 1. In our case 14 xy pairs.
-Here is an example of the label format for pose estimation task:
-
-`0 0.5 0.5 1 1 px1 py1 px2 py2 ... px14 py14`
 ## Usage
 First run the following command to ensure that all the required packages are installed and up to date: `pip install -r .\requirements.txt`.
 ### Preprocessing
 Based on which dataset you decide to use, you may need some preliminary work:
 * **If working with the original dataset**: Extract the dataset and download *preprocessing_scripts/dataset_preprocessor.py*. Run the python script, it will create the processed and rescaled dataset in your current working directory, ready to be fed to the CNN.
-  
-* **If you wish to do dataset augmentation**: Extract the **processed** dataset and download *preprocessing_scripts/dataset_augment.py*. Run the python script, it will create the augmented dataset in your current working directory, ready to be fed to the CNN.
-Note that both the "processed" and the "augmented" dataset have the same folder structure, so they can both be analyzed by the network.
 
 ### Network
-* Download the content of the **NN** folder on your PC.
-* Download and extract the dataset on your PC, then put its path into the *path* variable of the config.yaml file
-* Run *YOLO_NN.ipynb*
+
 

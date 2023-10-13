@@ -3,6 +3,8 @@ AUTHORS: Altieri J. , Mazzini V.
 
 This module will rearrange the dataset in the correct format in order for it to be fed to the NN;
 The processed dataset will be stored in "processed_dataset" in your current working directory.
+It will find the matching image-labels pair from the original dataset and sort them into train, test and val folders based on a user-chosen percentage
+It will also automatically resize images and labels according to a user-chosen size
 
 You need to run this code only if working from the original dataset
 """
@@ -14,9 +16,18 @@ from PIL import Image
 import numpy as np
 import pandas as pd
 
-NEW_SIZE = 256  # new image size
-TRAIN_PERC = 0.75 # percentage of data to put in train set, the rest will go in validation
+###### Functions #####
+def label_writer(path,coords):
+    with open(path, 'w') as f:
+        f.write("Landmark\tX\tY\n")
+        for i, (x,y) in enumerate(coords, start=1):
+            f.write(f"{i}\t{x}\t{y}\n")
 
+NEW_SIZE = 256  # new image size
+# percentages of train,val and test dataset
+TRAIN_PERC = 0.60 
+VAL_PERC = 0.20
+TEST_PERC = 0.20
 
 input_path=input("Provide the path for the dataset: ")
 
@@ -26,8 +37,10 @@ print("Preprocessing started...")
 print("Creating the directory tree in the current wd...")
 os.makedirs(os.getcwd() + "/processed_dataset/images/train", exist_ok=True)
 os.makedirs(os.getcwd() + "/processed_dataset/images/test", exist_ok=True)
+os.makedirs(os.getcwd() + "/processed_dataset/images/val", exist_ok=True)
 os.makedirs(os.getcwd() + "/processed_dataset/labels/train", exist_ok=True)
 os.makedirs(os.getcwd() + "/processed_dataset/labels/test", exist_ok=True)
+os.makedirs(os.getcwd() + "/processed_dataset/labels/val", exist_ok=True)
 
 
 # listing and matching images and labels
@@ -58,6 +71,8 @@ for i, j in enumerate(tqdm(matching)):
         resized_image = im.resize((int(NEW_SIZE),int(NEW_SIZE)))
         if i<int(len(matching)*TRAIN_PERC):        
             resized_image.save(os.getcwd()+"/processed_dataset/images/train/"+str(i)+".jpg", 'JPEG')
+        elif i < int(len(matching) * (TRAIN_PERC + VAL_PERC)):
+            resized_image.save(os.getcwd()+"/processed_dataset/images/val/"+str(i)+".jpg", 'JPEG')
         else:
              resized_image.save(os.getcwd()+"/processed_dataset/images/test/"+str(i)+".jpg", 'JPEG')
     
@@ -69,13 +84,9 @@ for i, j in enumerate(tqdm(matching)):
     coords*= scale_factor
     
     if i<int(len(matching)*TRAIN_PERC):        
-        with open(os.getcwd()+"/processed_dataset/labels/train/"+str(i)+".txt", 'w') as f:
-            f.write("Landmark\tX\tY\n")
-            for i, (x,y) in enumerate(coords, start=1):
-                f.write(f"{i}\t{x}\t{y}\n")
+        label_writer(os.getcwd()+"/processed_dataset/labels/train/"+str(i)+".txt", coords) 
+    elif i < int(len(matching) * (TRAIN_PERC + VAL_PERC)):
+        label_writer(os.getcwd()+"/processed_dataset/labels/val/"+str(i)+".txt", coords) 
     else:
-        with open(os.getcwd()+"/processed_dataset/labels/test/"+str(i)+".txt", 'w') as f:
-            f.write("Landmark\tX\tY\n")
-            for i, (x,y) in enumerate(coords, start=1):
-                f.write(f"{i}\t{x}\t{y}\n")
+        label_writer(os.getcwd()+"/processed_dataset/labels/test/"+str(i)+".txt", coords) 
 print('Preprocessing complete! The dataset in "'+os.getcwd()+'/processed_dataset" is ready to be used!')
