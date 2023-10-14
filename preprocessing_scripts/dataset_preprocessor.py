@@ -12,7 +12,7 @@ You need to run this code only if working from the original dataset
 import glob
 import os
 from tqdm import tqdm
-from PIL import Image
+import cv2
 import numpy as np
 import pandas as pd
 
@@ -57,14 +57,13 @@ def count_lines(filename):
         return sum(1 for line in file)
     
 label_files = glob.glob("**/*[!README].txt", root_dir=input_path, recursive=True)
-label_files = [file for file in label_files if count_lines(input_path+"/"+file) == 15]
+label_files = [file for file in label_files if count_lines(input_path+"/"+file) == 15]  #removes files with more/less than 14 landmarks
 
 img_files = [
     file
     for file in glob.glob("**/*.jpg", root_dir=input_path, recursive=True)
     if "-" not in file
 ]
-
 
     
 # finding the matching img-label pairs
@@ -76,18 +75,18 @@ print(f"Found {len(matching)} image-label pairs")
 # resizing the images and scaling the labels
 print("Rescaling images to 256x256 pixels...")
 for i, j in enumerate(tqdm(matching)):
-    with Image.open(input_path+"/"+j+".jpg").convert('RGB') as im:
-        original_size = im.size
-        resized_image = im.resize((int(NEW_SIZE),int(NEW_SIZE)))
-        if i<int(len(matching)*TRAIN_PERC):        
-            resized_image.save(os.getcwd()+"/processed_dataset/images/train/"+str(i)+".jpg", 'JPEG')
-        elif i < int(len(matching) * (TRAIN_PERC + VAL_PERC)):
-            resized_image.save(os.getcwd()+"/processed_dataset/images/val/"+str(i)+".jpg", 'JPEG')
-        else:
-             resized_image.save(os.getcwd()+"/processed_dataset/images/test/"+str(i)+".jpg", 'JPEG')
-    
+    im = cv2.imread(input_path+"/"+j+".jpg", cv2.IMREAD_UNCHANGED)
+    original_size = im.shape[:2]
+    resized_image = cv2.resize(im,(int(NEW_SIZE),int(NEW_SIZE)))
     scale_factor = NEW_SIZE/np.array(original_size)
-           
+
+    if i<int(len(matching)*TRAIN_PERC):        
+        cv2.imwrite(os.getcwd()+"/processed_dataset/images/train/"+str(i)+".jpg", resized_image)
+    elif i < int(len(matching) * (TRAIN_PERC + VAL_PERC)):
+        cv2.imwrite(os.getcwd()+"/processed_dataset/images/val/"+str(i)+".jpg", resized_image)
+    else:
+        cv2.imwrite(os.getcwd()+"/processed_dataset/images/test/"+str(i)+".jpg", resized_image)
+          
     path = input_path+"/"+j+".txt"
     data = pd.read_csv(path, sep="[;,\\t]", engine="python")
     coords = np.array(list(zip(data.loc[:, "X"], data.loc[:, "Y"])))
