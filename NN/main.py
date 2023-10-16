@@ -8,25 +8,30 @@ The second model is a ResNet50 which will perform the actual keypoint detection.
 A data augmentation process is also possible and present as a function, beware that this might be time-consuming.
 """
 
-import glob
 import matplotlib.pyplot as plt
 import cv2
 import numpy as np
-import pandas as pd
 
 import tensorflow as tf
-import unet, resnet
+
+# import unet, resnet
 
 
-batch_size = 20
+# Avoid OOM errors by setting GPU Memory Consumption Growth
+gpus = tf.config.experimental.list_physical_devices("GPU")
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
 
-# ================================================================#
-#              Importing dataset from directory                  #
-# ================================================================#
-input_path = r"C:\Users\jacop\Desktop\DL_Project\processed_dataset"
+BATCH_SIZE = 4
+
+# ================================================================ #
+#              Importing dataset from directory                    #
+# ================================================================ #
+# input_path = "/mnt/c/Users/jacop/Desktop/DL_Project/processed_dataset" #if in wsl
+input_path = r"C:\Users\jacop\Desktop\DL_Project\processed_dataset"  # if in windows
 
 
-# =========== Images ===========#
+# =========== Images =========== #
 def process_image(x):
     byte_img = tf.io.read_file(x)
     img = tf.io.decode_jpeg(byte_img)
@@ -42,17 +47,24 @@ test_images = tf.data.Dataset.list_files(
     input_path + "/images/test/*.jpg", shuffle=False
 )
 test_images = test_images.map(process_image)
+val_images = tf.data.Dataset.list_files(input_path + "/images/val/*.jpg", shuffle=False)
+val_images = val_images.map(process_image)
 
 
-# =========== Labels ===========#
+# =========== Labels =========== #
 def load_labels(path):
+    landmarks =[]
     with open(path.numpy(), "r", encoding="utf-8") as file:
-        lines = file.readlines()[1:]
-    labels = [line.strip().split("\t") for line in lines]
-    x_values = [float(label[1]) for label in labels]
-    y_values = [float(label[2]) for label in labels]
-    landmarks = np.concatenate((x_values, y_values))  # [x1,y1,x2,y2...,x14,y14]
-    return landmarks
+        next(file, None)
+        for line in file:
+            # Split each line into columns
+            columns = line.strip().split('\t')
+
+            # Extract X and Y values and convert them to floats
+            x_value = float(columns[1])/256 #/256 to normalize by the img size
+            y_value = float(columns[2])/256
+            landmarks.extend([x_value, y_value])
+    return np.array(landmarks)
 
 
 train_labels = tf.data.Dataset.list_files(
@@ -65,14 +77,43 @@ test_labels = tf.data.Dataset.list_files(
     input_path + "/labels/test/*.txt", shuffle=False
 )
 test_labels = test_labels.map(lambda x: tf.py_function(load_labels, [x], [tf.float16]))
+val_labels = tf.data.Dataset.list_files(input_path + "/labels/val/*.txt", shuffle=False)
+val_labels = val_labels.map(lambda x: tf.py_function(load_labels, [x], [tf.float16]))
 
-# =========== Combine Images and Labels ===========#
+
+# =========== Combine Images and Labels =========== #
 train = tf.data.Dataset.zip((train_images, train_labels))
-train = train.shuffle(2000)
-train = train.batch(batch_size)
-train = train.prefetch(4)   # preload images to avoid bottlenecking
+train = train.shuffle(1500)
+train = train.batch(BATCH_SIZE)
+train = train.prefetch(4)  # preload images to avoid bottlenecking
 
 test = tf.data.Dataset.zip((test_images, test_labels))
 test = test.shuffle(1000)
-test = test.batch(batch_size)
-test = test.prefetch(4)   # preload images to avoid bottlenecking
+test = test.batch(BATCH_SIZE)
+test = test.prefetch(4)  # preload images to avoid bottlenecking
+
+val = tf.data.Dataset.zip((val_images, val_labels))
+val = val.shuffle(1000)
+val = val.batch(BATCH_SIZE)
+val = val.prefetch(4)  # preload images to avoid bottlenecking
+
+
+# =========== Show some examples =========== #
+
+data_samples = train.as_numpy_iterator()
+res = data_samples.next()
+print(res)
+
+fig, ax = plt.subplots(ncols=4, figsize=(20,20))
+for idx in range(4): 
+    sample_image = res[0][idx]
+    sample_coords = res[1][0][idx]
+    
+    for i in range(0, len(sample_coords), 2):
+        x, y = sample_coords[i], sample_coords[i + 1]
+        x_pixel = int(x * 256)
+        y_pixel = int(y * 256)
+        cv2.circle(sample_image, (x_pixel, y_pixel), 2, (255, 0, 0), -1)
+    
+    ax[idx].imshow(sample_image)
+plt.show()
