@@ -7,11 +7,12 @@ The second model is a ResNet50 which will perform the actual keypoint detection.
 
 A data augmentation process is also possible and present as a function, beware that this might be time-consuming.
 """
-
+import os
 import matplotlib.pyplot as plt
 import cv2
 import numpy as np
 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # ignore TF unsupported NUMA warnings
 import tensorflow as tf
 
 # import unet, resnet
@@ -27,15 +28,15 @@ BATCH_SIZE = 4
 # ================================================================ #
 #              Importing dataset from directory                    #
 # ================================================================ #
-# input_path = "/mnt/c/Users/jacop/Desktop/DL_Project/processed_dataset" #if in wsl
-input_path = r"C:\Users\jacop\Desktop\DL_Project\processed_dataset"  # if in windows
+input_path = "/mnt/c/Users/jacop/Desktop/DL_Project/processed_dataset/" #if in wsl
+#input_path = r"C:\Users\jacop\Desktop\DL_Project\processed_dataset"  # if in windows
 
 
 # =========== Images =========== #
 def process_image(x):
     byte_img = tf.io.read_file(x)
     img = tf.io.decode_jpeg(byte_img)
-    img = img / 255  # normalize image
+    img = img / 255  # normalize pixel value
     return img
 
 
@@ -61,7 +62,7 @@ def load_labels(path):
             columns = line.strip().split('\t')
 
             # Extract X and Y values and convert them to floats
-            x_value = float(columns[1])/256 #/256 to normalize by the img size
+            x_value = float(columns[1])/256 # normaliza image size
             y_value = float(columns[2])/256
             landmarks.extend([x_value, y_value])
     return np.array(landmarks)
@@ -96,6 +97,7 @@ val = tf.data.Dataset.zip((val_images, val_labels))
 val = val.shuffle(1000)
 val = val.batch(BATCH_SIZE)
 val = val.prefetch(4)  # preload images to avoid bottlenecking
+
 
 
 # =========== Show some examples =========== #
