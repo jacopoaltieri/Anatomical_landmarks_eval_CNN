@@ -70,7 +70,6 @@ img_files = [
 lab = set([os.path.splitext(x)[0] for x in label_files])
 im = set([os.path.splitext(x)[0] for x in img_files])
 matching = list(im.intersection(lab))
-print(f"Found {len(matching)} image-label pairs")
 
 # resizing the images and scaling the labels
 print("Rescaling images to 256x256 pixels...")
@@ -78,7 +77,15 @@ for i, j in enumerate(tqdm(matching)):
     im = cv2.imread(input_path+"/"+j+".jpg", cv2.IMREAD_UNCHANGED)
     original_size = im.shape[:2]
     resized_image = cv2.resize(im,(int(NEW_SIZE),int(NEW_SIZE)))
-    scale_factor = NEW_SIZE/np.array(original_size)
+
+    path = input_path+"/"+j+".txt"
+    data = pd.read_csv(path, sep="[;,\\t]", engine="python")
+    coords = np.array(list(zip(data.loc[:, "X"], data.loc[:, "Y"])))
+
+    # rescale coords to NEW_SIZE
+    scale_x = NEW_SIZE / original_size[1]  # Calculate scaling factor for X
+    scale_y = NEW_SIZE / original_size[0]  # Calculate scaling factor for Y
+    new_coords = coords * np.array([scale_x, scale_y])
 
     if i<int(len(matching)*TRAIN_PERC):        
         cv2.imwrite(os.getcwd()+"/processed_dataset/images/train/"+str(i)+".jpg", resized_image)
@@ -86,16 +93,13 @@ for i, j in enumerate(tqdm(matching)):
         cv2.imwrite(os.getcwd()+"/processed_dataset/images/val/"+str(i)+".jpg", resized_image)
     else:
         cv2.imwrite(os.getcwd()+"/processed_dataset/images/test/"+str(i)+".jpg", resized_image)
-          
-    path = input_path+"/"+j+".txt"
-    data = pd.read_csv(path, sep="[;,\\t]", engine="python")
-    coords = np.array(list(zip(data.loc[:, "X"], data.loc[:, "Y"])))
-    coords*= scale_factor
-    
+
+
     if i<int(len(matching)*TRAIN_PERC):        
-        label_writer(os.getcwd()+"/processed_dataset/labels/train/"+str(i)+".txt", coords) 
+        label_writer(os.getcwd()+"/processed_dataset/labels/train/"+str(i)+".txt", new_coords) 
     elif i < int(len(matching) * (TRAIN_PERC + VAL_PERC)):
-        label_writer(os.getcwd()+"/processed_dataset/labels/val/"+str(i)+".txt", coords) 
+        label_writer(os.getcwd()+"/processed_dataset/labels/val/"+str(i)+".txt", new_coords) 
     else:
-        label_writer(os.getcwd()+"/processed_dataset/labels/test/"+str(i)+".txt", coords) 
+        label_writer(os.getcwd()+"/processed_dataset/labels/test/"+str(i)+".txt", new_coords)
+        
 print('Preprocessing complete! The dataset in "'+os.getcwd()+'/processed_dataset" is ready to be used!')
