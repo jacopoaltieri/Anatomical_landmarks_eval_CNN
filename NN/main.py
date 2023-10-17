@@ -15,8 +15,6 @@ import numpy as np
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # ignore TF unsupported NUMA warnings
 import tensorflow as tf
 
-# import unet, resnet
-
 
 # Avoid OOM errors by setting GPU Memory Consumption Growth
 gpus = tf.config.experimental.list_physical_devices("GPU")
@@ -119,3 +117,51 @@ for idx in range(4):
     
     ax[idx].imshow(sample_image)
 plt.show()
+
+
+
+
+# ================================================================ #
+#                        U-Net backbone                            #
+# ================================================================ #
+# a: activation, c: convolution, p: pooling, u: upconvolution
+
+unet_input_features = 2  # fixed and moving image
+input_shape = (256, 256, unet_input_features)
+
+
+def unet(pretrained_weights=None, input_size=(256,256,2,)):
+    inputs = tf.keras.layers.Input(input_size)    
+    
+    ### Downsampling path ###
+    a1 = tf.keras.layers.LeakyReLU(alpha=0.01)(inputs)
+    c1 = tf.keras.layers.Conv2D(64, 3, padding = "same", kernel_initializer = "he_normal")(a1)
+    c1 = tf.keras.layers.Dropout(0.1)(c1)
+    p1 = tf.leras.layers.MaxPooling2D(pool_size=(2, 2))(c1)
+
+    a2 = tf.keras.layers.LeakyReLU(alpha=0.01)(p1)
+    c2 = tf.keras.layers.Conv2D(128, 3, padding = "same", kernel_initializer = "he_normal")(a2)
+    c2 = tf.keras.layers.Dropout(0.1)(c2)
+    p2 = tf.leras.layers.MaxPooling2D(pool_size=(2, 2))(c2)
+
+    a3 = tf.keras.layers.LeakyReLU(alpha=0.01)(p2)
+    c3 = tf.keras.layers.Conv2D(128, 3, padding = "same", kernel_initializer = "he_normal")(a3)
+    c3 = tf.keras.layers.Dropout(0.1)(c3)
+    p3 = tf.leras.layers.MaxPooling2D(pool_size=(2, 2))(c3)
+
+    a4 = tf.keras.layers.LeakyReLU(alpha=0.01)(p3)
+    c4 = tf.keras.layers.Conv2D(256, 3, padding = "same", kernel_initializer = "he_normal")(a4)
+    c4 = tf.keras.layers.Dropout(0.1)(c4)
+    p4 = tf.leras.layers.MaxPooling2D(pool_size=(2, 2))(c4)
+
+    a5 = tf.keras.layers.LeakyReLU(alpha=0.01)(p4)
+    c5 = tf.keras.layers.Conv2D(512, 3, padding = "same", kernel_initializer = "he_normal")(a5)
+    c5 = tf.keras.layers.Dropout(0.1)(c5)
+    p5 = tf.leras.layers.MaxPooling2D(pool_size=(2, 2))(c5)
+    
+    a6 = tf.keras.layers.LeakyReLU(alpha=0.01)(p5)
+    c6 = tf.keras.layers.Conv2D(1024, 3, padding = "same", kernel_initializer = "he_normal")(a6)
+    c6 = tf.keras.layers.Dropout(0.1)(c6)
+    p6 = tf.leras.layers.MaxPooling2D(pool_size=(2, 2))(c6)
+
+    ### Upsampling Path
