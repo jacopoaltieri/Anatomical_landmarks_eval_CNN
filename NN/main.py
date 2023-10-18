@@ -26,8 +26,8 @@ BATCH_SIZE = 4
 # ================================================================ #
 #              Importing dataset from directory                    #
 # ================================================================ #
-input_path = "/mnt/c/Users/jacop/Desktop/DL_Project/processed_dataset/" #if in wsl
-#input_path = r"C:\Users\jacop\Desktop\DL_Project\processed_dataset"  # if in windows
+#input_path = "/mnt/c/Users/jacop/Desktop/DL_Project/processed_dataset/" #if in wsl
+input_path = r"C:\Users\jacop\Desktop\DL_Project\processed_dataset"  # if in windows
 
 
 # =========== Images =========== #
@@ -53,7 +53,7 @@ val_images = val_images.map(process_image)
 # =========== Labels =========== #
 def load_labels(path):
     landmarks =[]
-    with open(path.numpy(), "r", encoding="utf-8") as file:
+    with open(path.numpy(), "r", encoding="utf-7") as file:
         next(file, None)
         for line in file:
             # Split each line into columns
@@ -97,12 +97,11 @@ val = val.batch(BATCH_SIZE)
 val = val.prefetch(4)  # preload images to avoid bottlenecking
 
 
-
+"""
 # =========== Show some examples =========== #
 
 data_samples = train.as_numpy_iterator()
 res = data_samples.next()
-print(res)
 
 fig, ax = plt.subplots(ncols=4, figsize=(20,20))
 for idx in range(4): 
@@ -117,7 +116,7 @@ for idx in range(4):
     
     ax[idx].imshow(sample_image)
 plt.show()
-
+"""
 
 
 
@@ -130,38 +129,62 @@ unet_input_features = 2  # fixed and moving image
 input_shape = (256, 256, unet_input_features)
 
 
-def unet(pretrained_weights=None, input_size=(256,256,2,)):
-    inputs = tf.keras.layers.Input(input_size)    
-    
-    ### Downsampling path ###
-    a1 = tf.keras.layers.LeakyReLU(alpha=0.01)(inputs)
-    c1 = tf.keras.layers.Conv2D(64, 3, padding = "same", kernel_initializer = "he_normal")(a1)
-    c1 = tf.keras.layers.Dropout(0.1)(c1)
-    p1 = tf.leras.layers.MaxPooling2D(pool_size=(2, 2))(c1)
+inputs = tf.keras.layers.Input(input_shape)    
 
-    a2 = tf.keras.layers.LeakyReLU(alpha=0.01)(p1)
-    c2 = tf.keras.layers.Conv2D(128, 3, padding = "same", kernel_initializer = "he_normal")(a2)
-    c2 = tf.keras.layers.Dropout(0.1)(c2)
-    p2 = tf.leras.layers.MaxPooling2D(pool_size=(2, 2))(c2)
+### Downsampling path ###
+a1 = tf.keras.layers.LeakyReLU(alpha=0.01)(inputs)
+c1 = tf.keras.layers.Conv2D(64, 3, padding = "same", kernel_initializer = "he_normal")(a1)
+c1 = tf.keras.layers.Dropout(0.1)(c1)
+p1 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(c1)
 
-    a3 = tf.keras.layers.LeakyReLU(alpha=0.01)(p2)
-    c3 = tf.keras.layers.Conv2D(128, 3, padding = "same", kernel_initializer = "he_normal")(a3)
-    c3 = tf.keras.layers.Dropout(0.1)(c3)
-    p3 = tf.leras.layers.MaxPooling2D(pool_size=(2, 2))(c3)
+a2 = tf.keras.layers.LeakyReLU(alpha=0.01)(p1)
+c2 = tf.keras.layers.Conv2D(128, 3, padding = "same", kernel_initializer = "he_normal")(a2)
+c2 = tf.keras.layers.Dropout(0.1)(c2)
+p2 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(c2)
 
-    a4 = tf.keras.layers.LeakyReLU(alpha=0.01)(p3)
-    c4 = tf.keras.layers.Conv2D(256, 3, padding = "same", kernel_initializer = "he_normal")(a4)
-    c4 = tf.keras.layers.Dropout(0.1)(c4)
-    p4 = tf.leras.layers.MaxPooling2D(pool_size=(2, 2))(c4)
+a3 = tf.keras.layers.LeakyReLU(alpha=0.01)(p2)
+c3 = tf.keras.layers.Conv2D(256, 3, padding = "same", kernel_initializer = "he_normal")(a3)
+c3 = tf.keras.layers.Dropout(0.2)(c3)
+p3 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(c3)
 
-    a5 = tf.keras.layers.LeakyReLU(alpha=0.01)(p4)
-    c5 = tf.keras.layers.Conv2D(512, 3, padding = "same", kernel_initializer = "he_normal")(a5)
-    c5 = tf.keras.layers.Dropout(0.1)(c5)
-    p5 = tf.leras.layers.MaxPooling2D(pool_size=(2, 2))(c5)
-    
-    a6 = tf.keras.layers.LeakyReLU(alpha=0.01)(p5)
-    c6 = tf.keras.layers.Conv2D(1024, 3, padding = "same", kernel_initializer = "he_normal")(a6)
-    c6 = tf.keras.layers.Dropout(0.1)(c6)
-    p6 = tf.leras.layers.MaxPooling2D(pool_size=(2, 2))(c6)
+a4 = tf.keras.layers.LeakyReLU(alpha=0.01)(p3)
+c4 = tf.keras.layers.Conv2D(512, 3, padding = "same", kernel_initializer = "he_normal")(a4)
+c4 = tf.keras.layers.Dropout(0.2)(c4)
+p4 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(c4)
 
-    ### Upsampling Path
+a5 = tf.keras.layers.LeakyReLU(alpha=0.01)(p4)
+c5 = tf.keras.layers.Conv2D(1024, 3, padding = "same", kernel_initializer = "he_normal")(a5)
+c5 = tf.keras.layers.Dropout(0.3)(c5)
+
+### Upsampling Path ###
+u6 = tf.keras.layers.Conv2DTranspose(1024,(2,2),strides=(2,2),padding='same')(c5)
+u6 = tf.keras.layers.concatenate([u6,c4])
+a6 = tf.keras.layers.LeakyReLU(alpha=0.01)(u6)
+c6 = tf.keras.layers.Conv2D(512, 3, padding = "same", kernel_initializer = "he_normal")(a6)
+c6 = tf.keras.layers.Dropout(0.3)(c6)
+
+u7 = tf.keras.layers.Conv2DTranspose(512,(2,2),strides=(2,2),padding='same')(c6)
+u7 = tf.keras.layers.concatenate([u7,c3])
+a7 = tf.keras.layers.LeakyReLU(alpha=0.01)(u7)
+c7 = tf.keras.layers.Conv2D(256, 3, padding = "same", kernel_initializer = "he_normal")(a7)
+c7 = tf.keras.layers.Dropout(0.2)(c7)
+
+u8 = tf.keras.layers.Conv2DTranspose(256,(2,2),strides=(2,2),padding='same')(c7)
+u8 = tf.keras.layers.concatenate([u8,c2])
+a8 = tf.keras.layers.LeakyReLU(alpha=0.01)(u8)
+c8 = tf.keras.layers.Conv2D(128, 3, padding = "same", kernel_initializer = "he_normal")(a8)
+c8 = tf.keras.layers.Dropout(0.2)(c8)
+
+u9 = tf.keras.layers.Conv2DTranspose(128,(2,2),strides=(2,2),padding='same')(c8)
+u9 = tf.keras.layers.concatenate([u9,c1])
+a9 = tf.keras.layers.LeakyReLU(alpha=0.01)(u9)
+c9 = tf.keras.layers.Conv2D(64, 3, padding = "same", kernel_initializer = "he_normal")(a9)
+c9 = tf.keras.layers.Dropout(0.1)(c9)
+
+outputs = tf.keras.layers.Conv2D(1,(1,1),activation='sigmoid')(c9)
+
+unet = tf.keras.Model(inputs=[inputs], outputs=[outputs])
+
+displacement_tensor = tf.keras.layers.Conv2D(2,kernel_size=3, padding='same', name='disp')(unet.output)
+# check tensor shape
+print('displacement tensor:', displacement_tensor.shape)
