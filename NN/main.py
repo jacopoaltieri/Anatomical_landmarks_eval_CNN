@@ -8,11 +8,11 @@ The second model is a ResNet50 which will perform the actual keypoint detection.
 A data augmentation process is also possible and present as a function, beware that this might be time-consuming.
 """
 import os
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt  # ciaone
 import cv2
 import numpy as np
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # ignore TF unsupported NUMA warnings
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # ignore TF unsupported NUMA warnings
 import tensorflow as tf
 
 
@@ -26,75 +26,137 @@ BATCH_SIZE = 4
 # ================================================================ #
 #              Importing dataset from directory                    #
 # ================================================================ #
-#input_path = "/mnt/c/Users/jacop/Desktop/DL_Project/processed_dataset/" #if in wsl
-input_path = r"C:\Users\jacop\Desktop\DL_Project\processed_dataset"  # if in windows
+
+# input_path = "/mnt/c/Users/jacop/Desktop/DL_Project/processed_dataset/" #if in wsl
+# input_path = r"C:\Users\vitto\Desktop\DL project\DL project github\augmented_dataset\augmented_dataset"  # if in windows
 
 
 # =========== Images =========== #
+
+
+# Definizione della funzione per l'elaborazione delle immagini
 def process_image(x):
+    # Leggi il contenuto del file immagine come sequenza di byte
     byte_img = tf.io.read_file(x)
+    # Decodifica l'immagine utilizzando il formato JPEG
     img = tf.io.decode_jpeg(byte_img)
-    img = img / 255  # normalize pixel value
+    # Normalizza i valori dei pixel nell'intervallo [0, 1]
+    img = img / 255
     return img
 
 
+# Creazione di un dataset per le immagini di addestramento
 train_images = tf.data.Dataset.list_files(
     input_path + "/images/train/*.jpg", shuffle=False
 )
+# Applica la funzione process_image a ciascun elemento del dataset
 train_images = train_images.map(process_image)
+
+# Creazione di un dataset per le immagini di test
 test_images = tf.data.Dataset.list_files(
     input_path + "/images/test/*.jpg", shuffle=False
 )
+# Applica la funzione process_image a ciascun elemento del dataset
 test_images = test_images.map(process_image)
+
+# Creazione di un dataset per le immagini di validazione
 val_images = tf.data.Dataset.list_files(input_path + "/images/val/*.jpg", shuffle=False)
+# Applica la funzione process_image a ciascun elemento del dataset
 val_images = val_images.map(process_image)
 
 
 # =========== Labels =========== #
-def load_labels(path):
-    landmarks =[]
-    with open(path.numpy(), "r", encoding="utf-7") as file:
-        next(file, None)
-        for line in file:
-            # Split each line into columns
-            columns = line.strip().split('\t')
 
-            # Extract X and Y values and convert them to floats
-            x_value = float(columns[1])/256 # normaliza image size
-            y_value = float(columns[2])/256
+
+# Definizione di una funzione per caricare le etichette da un file di testo
+def load_labels(path):
+    # Inizializza una lista vuota per le etichette
+    landmarks = []
+
+    # Apre il file di etichette specificato da `path` in modalità di lettura con encoding "utf-7"
+    with open(path.numpy(), "r", encoding="utf-7") as file:
+        # Salta la prima riga del file
+        next(file, None)
+
+        # Itera attraverso le righe rimanenti nel file
+        for line in file:
+            # Divide ciascuna riga in colonne utilizzando il carattere di tabulazione '\t' come delimitatore
+            columns = line.strip().split("\t")
+
+            # Estrae i valori X e Y dalle colonne 1 e 2 (considerando gli indici 0-based)
+            # e li converte in valori float. Inoltre, li normalizza dividendo per 256
+            x_value = float(columns[1]) / 256
+            y_value = float(columns[2]) / 256
+
+            # Aggiunge i valori X e Y normalizzati alla lista `landmarks`
             landmarks.extend([x_value, y_value])
+
+    # Converte la lista `landmarks` in un array NumPy e lo restituisce come etichetta
     return np.array(landmarks)
 
 
+# Creazione di tre dataset TensorFlow per le etichette
+# - `train_labels`: Percorsi dei file di etichette nella directory "train"
 train_labels = tf.data.Dataset.list_files(
     input_path + "/labels/train/*.txt", shuffle=False
 )
+# Mappa la funzione `load_labels` su ciascun percorso di file e ottiene etichette di tipo float16
 train_labels = train_labels.map(
     lambda x: tf.py_function(load_labels, [x], [tf.float16])
 )
+
+# - `test_labels`: Percorsi dei file di etichette nella directory "test"
 test_labels = tf.data.Dataset.list_files(
     input_path + "/labels/test/*.txt", shuffle=False
 )
+# Mappa la funzione `load_labels` su ciascun percorso di file e ottiene etichette di tipo float16
 test_labels = test_labels.map(lambda x: tf.py_function(load_labels, [x], [tf.float16]))
+
+# - `val_labels`: Percorsi dei file di etichette nella directory "val"
 val_labels = tf.data.Dataset.list_files(input_path + "/labels/val/*.txt", shuffle=False)
+# Mappa la funzione `load_labels` su ciascun percorso di file e ottiene etichette di tipo float16
 val_labels = val_labels.map(lambda x: tf.py_function(load_labels, [x], [tf.float16]))
 
 
 # =========== Combine Images and Labels =========== #
+
+# Creazione del dataset di addestramento combinando immagini ed etichette
 train = tf.data.Dataset.zip((train_images, train_labels))
+
+# Mescola casualmente l'ordine degli elementi nel dataset di addestramento
 train = train.shuffle(1500)
+
+# Raggruppa gli elementi del dataset in batch di dimensione specificata da `BATCH_SIZE`
 train = train.batch(BATCH_SIZE)
-train = train.prefetch(4)  # preload images to avoid bottlenecking
 
+# Implementa il prefetching per caricare in anticipo i dati del prossimo batch
+train = train.prefetch(4)
+
+# Lo stesso procedimento viene ora applicato ai dataset di test e validazione
+
+# Creazione del dataset di test combinando immagini ed etichette
 test = tf.data.Dataset.zip((test_images, test_labels))
-test = test.shuffle(1000)
-test = test.batch(BATCH_SIZE)
-test = test.prefetch(4)  # preload images to avoid bottlenecking
 
+# Mescola casualmente l'ordine degli elementi nel dataset di test
+test = test.shuffle(1000)
+
+# Raggruppa gli elementi del dataset in batch di dimensione specificata da `BATCH_SIZE`
+test = test.batch(BATCH_SIZE)
+
+# Implementa il prefetching per caricare in anticipo i dati del prossimo batch
+test = test.prefetch(4)
+
+# Creazione del dataset di validazione combinando immagini ed etichette
 val = tf.data.Dataset.zip((val_images, val_labels))
+
+# Mescola casualmente l'ordine degli elementi nel dataset di validazione
 val = val.shuffle(1000)
+
+# Raggruppa gli elementi del dataset in batch di dimensione specificata da `BATCH_SIZE`
 val = val.batch(BATCH_SIZE)
-val = val.prefetch(4)  # preload images to avoid bottlenecking
+
+# Implementa il prefetching per caricare in anticipo i dati del prossimo batch
+val = val.prefetch(4)
 
 
 """
@@ -119,72 +181,110 @@ plt.show()
 """
 
 
-
 # ================================================================ #
 #                        U-Net backbone                            #
 # ================================================================ #
 # a: activation, c: convolution, p: pooling, u: upconvolution
 
-unet_input_features = 2  # fixed and moving image
+unet_input_features = (
+    2  # Rappresenta il numero di feature di input (due immagini: fissa e mobile)
+)
+
+# Definizione della forma dell'input
 input_shape = (256, 256, unet_input_features)
+# La forma dell'input sarà un tensore tridimensionale:
+# - 256: Larghezza dell'immagine in pixel
+# - 256: Altezza dell'immagine in pixel
+# - unet_input_features: Numero di feature di input (2 in questo caso)
 
-
-inputs = tf.keras.layers.Input(input_shape)    
+# Creazione di un layer di input
+inputs = tf.keras.layers.Input(input_shape)
+# Questo passaggio crea un layer di input utilizzando Keras, che definisce la forma
+# dell'input che il modello U-Net accetterà durante l'addestramento e l'inferenza.
+# Il layer di input sarà progettato per accettare dati con la forma specificata da input_shape,
+# che è adatta per immagini di 256x256 pixel con due feature di input.
 
 ### Downsampling path ###
+
+# Applicazione della funzione di attivazione Leaky ReLU con coefficiente alpha
 a1 = tf.keras.layers.LeakyReLU(alpha=0.01)(inputs)
-c1 = tf.keras.layers.Conv2D(64, 3, padding = "same", kernel_initializer = "he_normal")(a1)
+
+# Applicazione di un layer di convoluzione 2D con 64 filtri di dimensione 3x3
+c1 = tf.keras.layers.Conv2D(64, 3, padding="same", kernel_initializer="he_normal")(a1)
+
+# Applicazione del layer di Dropout con un tasso di dropout del 10%
 c1 = tf.keras.layers.Dropout(0.1)(c1)
+
+# Applicazione del max-pooling con una finestra di pooling di dimensione 2x2
 p1 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(c1)
 
+
 a2 = tf.keras.layers.LeakyReLU(alpha=0.01)(p1)
-c2 = tf.keras.layers.Conv2D(128, 3, padding = "same", kernel_initializer = "he_normal")(a2)
+c2 = tf.keras.layers.Conv2D(128, 3, padding="same", kernel_initializer="he_normal")(a2)
 c2 = tf.keras.layers.Dropout(0.1)(c2)
 p2 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(c2)
 
 a3 = tf.keras.layers.LeakyReLU(alpha=0.01)(p2)
-c3 = tf.keras.layers.Conv2D(256, 3, padding = "same", kernel_initializer = "he_normal")(a3)
+c3 = tf.keras.layers.Conv2D(256, 3, padding="same", kernel_initializer="he_normal")(a3)
 c3 = tf.keras.layers.Dropout(0.2)(c3)
 p3 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(c3)
 
 a4 = tf.keras.layers.LeakyReLU(alpha=0.01)(p3)
-c4 = tf.keras.layers.Conv2D(512, 3, padding = "same", kernel_initializer = "he_normal")(a4)
+c4 = tf.keras.layers.Conv2D(512, 3, padding="same", kernel_initializer="he_normal")(a4)
 c4 = tf.keras.layers.Dropout(0.2)(c4)
 p4 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(c4)
 
 a5 = tf.keras.layers.LeakyReLU(alpha=0.01)(p4)
-c5 = tf.keras.layers.Conv2D(1024, 3, padding = "same", kernel_initializer = "he_normal")(a5)
+c5 = tf.keras.layers.Conv2D(1024, 3, padding="same", kernel_initializer="he_normal")(a5)
 c5 = tf.keras.layers.Dropout(0.3)(c5)
 
 ### Upsampling Path ###
-u6 = tf.keras.layers.Conv2DTranspose(1024,(2,2),strides=(2,2),padding='same')(c5)
-u6 = tf.keras.layers.concatenate([u6,c4])
-a6 = tf.keras.layers.LeakyReLU(alpha=0.01)(u6)
-c6 = tf.keras.layers.Conv2D(512, 3, padding = "same", kernel_initializer = "he_normal")(a6)
-c6 = tf.keras.layers.Dropout(0.3)(c6)
 
-u7 = tf.keras.layers.Conv2DTranspose(512,(2,2),strides=(2,2),padding='same')(c6)
-u7 = tf.keras.layers.concatenate([u7,c3])
+# Decodifica dell'output dell'encoder con la trasposizione della convoluzione 2D
+u6 = tf.keras.layers.Conv2DTranspose(1024, (2, 2), strides=(2, 2), padding="same")(c5)
+u6 = tf.keras.layers.concatenate(
+    [u6, c4]
+)  # Concatenazione dell'output con gli strati dell'encoder precedenti
+a6 = tf.keras.layers.LeakyReLU(alpha=0.01)(u6)  # Applicazione di Leaky ReLU
+c6 = tf.keras.layers.Conv2D(512, 3, padding="same", kernel_initializer="he_normal")(
+    a6
+)  # Convoluzione 2D
+c6 = tf.keras.layers.Dropout(0.3)(c6)  # Applicazione di Dropout
+
+u7 = tf.keras.layers.Conv2DTranspose(512, (2, 2), strides=(2, 2), padding="same")(c6)
+u7 = tf.keras.layers.concatenate([u7, c3])
 a7 = tf.keras.layers.LeakyReLU(alpha=0.01)(u7)
-c7 = tf.keras.layers.Conv2D(256, 3, padding = "same", kernel_initializer = "he_normal")(a7)
+c7 = tf.keras.layers.Conv2D(256, 3, padding="same", kernel_initializer="he_normal")(a7)
 c7 = tf.keras.layers.Dropout(0.2)(c7)
 
-u8 = tf.keras.layers.Conv2DTranspose(256,(2,2),strides=(2,2),padding='same')(c7)
-u8 = tf.keras.layers.concatenate([u8,c2])
+u8 = tf.keras.layers.Conv2DTranspose(256, (2, 2), strides=(2, 2), padding="same")(c7)
+u8 = tf.keras.layers.concatenate([u8, c2])
 a8 = tf.keras.layers.LeakyReLU(alpha=0.01)(u8)
-c8 = tf.keras.layers.Conv2D(128, 3, padding = "same", kernel_initializer = "he_normal")(a8)
+c8 = tf.keras.layers.Conv2D(128, 3, padding="same", kernel_initializer="he_normal")(a8)
 c8 = tf.keras.layers.Dropout(0.2)(c8)
 
-u9 = tf.keras.layers.Conv2DTranspose(128,(2,2),strides=(2,2),padding='same')(c8)
-u9 = tf.keras.layers.concatenate([u9,c1])
+u9 = tf.keras.layers.Conv2DTranspose(128, (2, 2), strides=(2, 2), padding="same")(c8)
+u9 = tf.keras.layers.concatenate([u9, c1])
 a9 = tf.keras.layers.LeakyReLU(alpha=0.01)(u9)
-c9 = tf.keras.layers.Conv2D(64, 3, padding = "same", kernel_initializer = "he_normal")(a9)
+c9 = tf.keras.layers.Conv2D(64, 3, padding="same", kernel_initializer="he_normal")(a9)
 c9 = tf.keras.layers.Dropout(0.1)(c9)
 
-outputs = tf.keras.layers.Conv2D(1,(1,1),activation='sigmoid')(c9)
+# Creazione dell'output finale del modello
+outputs = tf.keras.layers.Conv2D(1, (1, 1), activation="sigmoid")(c9)
 
+# Creazione del modello U-Net completo
 unet = tf.keras.Model(inputs=[inputs], outputs=[outputs])
 
-displacement_tensor = tf.keras.layers.Conv2D(2,kernel_size=3, padding='same', name='disp')(unet.output)
-# check tensor shape
-print('displacement tensor:', displacement_tensor.shape)
+# Creazione di un tensore di spostamento
+displacement_tensor = tf.keras.layers.Conv2D(
+    2, kernel_size=3, padding="same", name="disp"
+)(unet.output)
+
+# Verifica della forma del tensore di spostamento
+print("displacement tensor:", displacement_tensor.shape)
+
+unet.compile(optimizer="adam", loss="mean_squared_error")
+unet.fit(train, epochs=10, validation_data=val)
+
+# Effettua la fase di test per ottenere l'immagine trasformata
+# transformed_image = tf.nn.warpPerspective(test, displacement_tensor)
