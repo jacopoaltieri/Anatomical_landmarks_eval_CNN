@@ -29,6 +29,7 @@ BATCH_SIZE = 4
 
 # input_path = "/mnt/c/Users/jacop/Desktop/DL_Project/processed_dataset/" #if in wsl
 # input_path = r"C:\Users\vitto\Desktop\DL project\DL project github\augmented_dataset\augmented_dataset"  # if in windows
+input_path = r"C:\Users\jacop\Desktop\DL_Project\processed_dataset"  # if in windows
 
 
 # =========== Images =========== #
@@ -40,6 +41,9 @@ def process_image(x):
     byte_img = tf.io.read_file(x)
     # Decodifica l'immagine utilizzando il formato JPEG
     img = tf.io.decode_jpeg(byte_img)
+    # Convert images to grayscale
+    img = tf.image.rgb_to_grayscale(img)
+    img = tf.squeeze(img, axis=-1)
     # Normalizza i valori dei pixel nell'intervallo [0, 1]
     img = img / 255
     return img
@@ -73,8 +77,8 @@ def load_labels(path):
     # Inizializza una lista vuota per le etichette
     landmarks = []
 
-    # Apre il file di etichette specificato da `path` in modalità di lettura con encoding "utf-7"
-    with open(path.numpy(), "r", encoding="utf-7") as file:
+    # Apre il file di etichette specificato da `path` in modalità di lettura con encoding "utf-8"
+    with open(path.numpy(), "r", encoding="utf-8") as file:
         # Salta la prima riga del file
         next(file, None)
 
@@ -91,25 +95,15 @@ def load_labels(path):
             # Aggiunge i valori X e Y normalizzati alla lista `landmarks`
             landmarks.extend([x_value, y_value])
 
-    # Converte la lista `landmarks` in un array NumPy e lo restituisce come etichetta
+    # Convert `landmarks` to a NumPy array
     return np.array(landmarks)
 
 
-# Creazione di tre dataset TensorFlow per le etichette
-# - `train_labels`: Percorsi dei file di etichette nella directory "train"
-train_labels = tf.data.Dataset.list_files(
-    input_path + "/labels/train/*.txt", shuffle=False
-)
-# Mappa la funzione `load_labels` su ciascun percorso di file e ottiene etichette di tipo float16
-train_labels = train_labels.map(
-    lambda x: tf.py_function(load_labels, [x], [tf.float16])
-)
+# Create train, test and val label dataset and load their labels using the corresponding function
+train_labels = tf.data.Dataset.list_files(input_path + "/labels/train/*.txt", shuffle=False)
+train_labels = train_labels.map(lambda x: tf.py_function(load_labels, [x], [tf.float16]))
 
-# - `test_labels`: Percorsi dei file di etichette nella directory "test"
-test_labels = tf.data.Dataset.list_files(
-    input_path + "/labels/test/*.txt", shuffle=False
-)
-# Mappa la funzione `load_labels` su ciascun percorso di file e ottiene etichette di tipo float16
+test_labels = tf.data.Dataset.list_files(input_path + "/labels/test/*.txt", shuffle=False)
 test_labels = test_labels.map(lambda x: tf.py_function(load_labels, [x], [tf.float16]))
 
 # - `val_labels`: Percorsi dei file di etichette nella directory "val"
@@ -176,7 +170,7 @@ for idx in range(4):
         y_pixel = int(y * 256)
         cv2.circle(sample_image, (x_pixel, y_pixel), 2, (255, 0, 0), -1)
     
-    ax[idx].imshow(sample_image)
+    ax[idx].imshow(sample_image,cmap='gray', vmin=0, vmax=1)
 plt.show()
 """
 
@@ -186,9 +180,7 @@ plt.show()
 # ================================================================ #
 # a: activation, c: convolution, p: pooling, u: upconvolution
 
-unet_input_features = (
-    2  # Rappresenta il numero di feature di input (due immagini: fissa e mobile)
-)
+unet_input_features = (2)   # Rappresenta il numero di feature di input (due immagini: fissa e mobile)
 
 # Definizione della forma dell'input
 input_shape = (256, 256, unet_input_features)
@@ -280,10 +272,13 @@ displacement_tensor = tf.keras.layers.Conv2D(
     2, kernel_size=3, padding="same", name="disp"
 )(unet.output)
 
-# Verifica della forma del tensore di spostamento
 print("displacement tensor:", displacement_tensor.shape)
 
-unet.compile(optimizer="adam", loss="mean_squared_error")
+# Defining the displacement field model
+disp_model = tf.keras.models.Model(unet.inputs, displacement_tensor)
+# Defining the loss as 
+
+unet.compile(optimizer="adam", loss="mean_squared_error", metrics=["accuracy"])
 unet.fit(train, epochs=10, validation_data=val)
 
 # Effettua la fase di test per ottenere l'immagine trasformata
