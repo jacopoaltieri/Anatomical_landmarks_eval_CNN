@@ -196,7 +196,7 @@ val_images_only = val.map(lambda x, y: x)
 unet_input_features = 2   # Rappresenta il numero di feature di input (due immagini: fissa e mobile)
 
 # Definizione della forma dell'input
-input_shape = (256, 256, 1)
+input_shape = (256, 256, unet_input_features)
 # La forma dell'input sarà un tensore tridimensionale:
 # - 256: Larghezza dell'immagine in pixel
 # - 256: Altezza dell'immagine in pixel
