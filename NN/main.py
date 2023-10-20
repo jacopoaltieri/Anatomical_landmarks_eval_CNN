@@ -23,9 +23,13 @@ for gpu in gpus:
 
 BATCH_SIZE = 4
 
+######################################## DATA COLLECTION ########################################
+
 # ================================================================ #
 #              Importing dataset from directory                    #
 # ================================================================ #
+
+print("Started dataset loading...")
 
 # input_path = "/mnt/c/Users/jacop/Desktop/DL_Project/processed_dataset/" #if in wsl
 # input_path = r"C:\Users\vitto\Desktop\DL project\DL project github\augmented_dataset\augmented_dataset"  # if in windows
@@ -175,15 +179,24 @@ plt.show()
 """
 
 
+######################################## U-NET ########################################
+
+print("Started U-Net training...")
+
+# We only need images in this part
+train_images_only = train.map(lambda x, y: x)
+test_images_only = test.map(lambda x, y: x)
+val_images_only = val.map(lambda x, y: x)
+
 # ================================================================ #
 #                        U-Net backbone                            #
 # ================================================================ #
 # a: activation, c: convolution, p: pooling, u: upconvolution
 
-unet_input_features = (2)   # Rappresenta il numero di feature di input (due immagini: fissa e mobile)
+unet_input_features = 2   # Rappresenta il numero di feature di input (due immagini: fissa e mobile)
 
 # Definizione della forma dell'input
-input_shape = (256, 256, unet_input_features)
+input_shape = (256, 256, 1)
 # La forma dell'input sarà un tensore tridimensionale:
 # - 256: Larghezza dell'immagine in pixel
 # - 256: Altezza dell'immagine in pixel
@@ -233,7 +246,7 @@ c5 = tf.keras.layers.Dropout(0.3)(c5)
 ### Upsampling Path ###
 
 # Decodifica dell'output dell'encoder con la trasposizione della convoluzione 2D
-u6 = tf.keras.layers.Conv2DTranspose(1024, (2, 2), strides=(2, 2), padding="same")(c5)
+u6 = tf.keras.layers.Conv2DTranspose(512, (2, 2), strides=(2, 2), padding="same")(c5)
 u6 = tf.keras.layers.concatenate(
     [u6, c4]
 )  # Concatenazione dell'output con gli strati dell'encoder precedenti
@@ -243,43 +256,42 @@ c6 = tf.keras.layers.Conv2D(512, 3, padding="same", kernel_initializer="he_norma
 )  # Convoluzione 2D
 c6 = tf.keras.layers.Dropout(0.3)(c6)  # Applicazione di Dropout
 
-u7 = tf.keras.layers.Conv2DTranspose(512, (2, 2), strides=(2, 2), padding="same")(c6)
+u7 = tf.keras.layers.Conv2DTranspose(256, (2, 2), strides=(2, 2), padding="same")(c6)
 u7 = tf.keras.layers.concatenate([u7, c3])
 a7 = tf.keras.layers.LeakyReLU(alpha=0.01)(u7)
 c7 = tf.keras.layers.Conv2D(256, 3, padding="same", kernel_initializer="he_normal")(a7)
 c7 = tf.keras.layers.Dropout(0.2)(c7)
 
-u8 = tf.keras.layers.Conv2DTranspose(256, (2, 2), strides=(2, 2), padding="same")(c7)
+u8 = tf.keras.layers.Conv2DTranspose(128, (2, 2), strides=(2, 2), padding="same")(c7)
 u8 = tf.keras.layers.concatenate([u8, c2])
 a8 = tf.keras.layers.LeakyReLU(alpha=0.01)(u8)
 c8 = tf.keras.layers.Conv2D(128, 3, padding="same", kernel_initializer="he_normal")(a8)
 c8 = tf.keras.layers.Dropout(0.2)(c8)
 
-u9 = tf.keras.layers.Conv2DTranspose(128, (2, 2), strides=(2, 2), padding="same")(c8)
+u9 = tf.keras.layers.Conv2DTranspose(64, (2, 2), strides=(2, 2), padding="same")(c8)
 u9 = tf.keras.layers.concatenate([u9, c1])
 a9 = tf.keras.layers.LeakyReLU(alpha=0.01)(u9)
 c9 = tf.keras.layers.Conv2D(64, 3, padding="same", kernel_initializer="he_normal")(a9)
 c9 = tf.keras.layers.Dropout(0.1)(c9)
 
 # Creazione dell'output finale del modello
-outputs = tf.keras.layers.Conv2D(1, (1, 1), activation="sigmoid")(c9)
+c10 = tf.keras.layers.Conv2D(2, 1, padding="same", kernel_initializer="he_normal")(c9)
 
-# Creazione del modello U-Net completo
-unet = tf.keras.Model(inputs=[inputs], outputs=[outputs])
-
-# Creazione di un tensore di spostamento
+# Creazione di un tensore di deformazione
 displacement_tensor = tf.keras.layers.Conv2D(
-    2, kernel_size=3, padding="same", name="disp"
-)(unet.output)
+    2, kernel_size=3,activation='linear', padding="same", name="disp"
+)(c10)
+# Creazione del modello U-Net completo
+unet = tf.keras.Model(inputs=[inputs], outputs=[displacement_tensor])
 
-print("displacement tensor:", displacement_tensor.shape)
+#print("displacement tensor:", displacement_tensor.shape)
 
-# Defining the displacement field model
-disp_model = tf.keras.models.Model(unet.inputs, displacement_tensor)
-# Defining the loss as 
+unet.compile(optimizer="adam", loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+              metrics=['accuracy'])
 
-unet.compile(optimizer="adam", loss="mean_squared_error", metrics=["accuracy"])
-unet.fit(train, epochs=10, validation_data=val)
+
+#unet.summary()
+unet.fit(train_images_only, epochs=10, validation_data=val_images_only)
 
 # Effettua la fase di test per ottenere l'immagine trasformata
 # transformed_image = tf.nn.warpPerspective(test, displacement_tensor)
