@@ -8,8 +8,9 @@ The second model is a ResNet50 which will perform the actual keypoint detection.
 A data augmentation process is also possible and present as a function, beware that this might be time-consuming.
 """
 import os
-import matplotlib.pyplot as plt  # ciaone
+import matplotlib.pyplot as plt
 import cv2
+import elasticdeform
 import numpy as np
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # ignore TF unsupported NUMA warnings
@@ -21,7 +22,7 @@ gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
-BATCH_SIZE = 4
+BATCH_SIZE = 20
 
 ######################################## DATA COLLECTION ########################################
 
@@ -120,7 +121,10 @@ val_labels = val_labels.map(lambda x: tf.py_function(load_labels, [x], [tf.float
 
 # Creazione del dataset di addestramento combinando immagini ed etichette
 train = tf.data.Dataset.zip((train_images, train_labels))
+test = tf.data.Dataset.zip((test_images, test_labels))
+val = tf.data.Dataset.zip((val_images, val_labels))
 
+"""
 # Mescola casualmente l'ordine degli elementi nel dataset di addestramento
 train = train.shuffle(1500)
 
@@ -132,8 +136,6 @@ train = train.prefetch(4)
 
 # Lo stesso procedimento viene ora applicato ai dataset di test e validazione
 
-# Creazione del dataset di test combinando immagini ed etichette
-test = tf.data.Dataset.zip((test_images, test_labels))
 
 # Mescola casualmente l'ordine degli elementi nel dataset di test
 test = test.shuffle(1000)
@@ -144,9 +146,6 @@ test = test.batch(BATCH_SIZE)
 # Implementa il prefetching per caricare in anticipo i dati del prossimo batch
 test = test.prefetch(4)
 
-# Creazione del dataset di validazione combinando immagini ed etichette
-val = tf.data.Dataset.zip((val_images, val_labels))
-
 # Mescola casualmente l'ordine degli elementi nel dataset di validazione
 val = val.shuffle(1000)
 
@@ -155,7 +154,7 @@ val = val.batch(BATCH_SIZE)
 
 # Implementa il prefetching per caricare in anticipo i dati del prossimo batch
 val = val.prefetch(4)
-
+"""
 
 """
 # =========== Show some examples =========== #
@@ -188,31 +187,57 @@ train_images_only = train.map(lambda x, y: x)
 test_images_only = test.map(lambda x, y: x)
 val_images_only = val.map(lambda x, y: x)
 
+
+images_list = list(train_images_only)
+# Create a generator function to yield the combined image tensor
+def combined_image_generator():
+    for moving_image in train_images_only:
+        # The first image in train_images_only is considered as "fixed_image"
+        fixed_image = images_list[0]
+        
+        # Combine fixed and moving images into a single tensor
+        combined_image = tf.concat([fixed_image, moving_image], axis=-1)
+        
+        yield combined_image
+# Create a TensorFlow dataset from the generator
+combined_image_dataset = tf.data.Dataset.from_generator(
+    combined_image_generator,
+    output_signature=tf.TensorSpec(shape=(256, 256, 2), dtype=tf.float32)
+)
+combined_image_dataset = combined_image_dataset.shuffle(1000).batch(BATCH_SIZE)
+
+
 # ================================================================ #
 #                        U-Net backbone                            #
 # ================================================================ #
 # a: activation, c: convolution, p: pooling, u: upconvolution
 
-unet_input_features = 2   # Rappresenta il numero di feature di input (due immagini: fissa e mobile)
+# Define the deformation function to be applied in the Lambda layer
+def apply_elastic_deformation(inputs):
+    images, deformation_tensor = inputs
+    # Split the inputs into the fixed and moving images
+    fixed_image, moving_image = tf.split(images, num_or_size_splits=2, axis=-1)
+    tf.make_ndarray(deformation_tensor)
+    # Apply the deformation to the moving image
+    deformed_image = elasticdeform.deform_grid(moving_image, deformation_tensor)
+    
+    return deformed_image
+
 
 # Definizione della forma dell'input
-input_shape = (256, 256, unet_input_features)
-# La forma dell'input sarà un tensore tridimensionale:
 # - 256: Larghezza dell'immagine in pixel
 # - 256: Altezza dell'immagine in pixel
-# - unet_input_features: Numero di feature di input (2 in questo caso)
+# - 1 : Grayscale image
+input_shape = (256, 256, 2)
 
-# Creazione di un layer di input
-inputs = tf.keras.layers.Input(input_shape)
-# Questo passaggio crea un layer di input utilizzando Keras, che definisce la forma
-# dell'input che il modello U-Net accetterà durante l'addestramento e l'inferenza.
-# Il layer di input sarà progettato per accettare dati con la forma specificata da input_shape,
-# che è adatta per immagini di 256x256 pixel con due feature di input.
+
+# Due immagini, una fixed e una moving, prese come input
+input = tf.keras.layers.Input(shape=input_shape)
 
 ### Downsampling path ###
 
 # Applicazione della funzione di attivazione Leaky ReLU con coefficiente alpha
-a1 = tf.keras.layers.LeakyReLU(alpha=0.01)(inputs)
+a1 = tf.keras.layers.LeakyReLU(alpha=0.01)(input)
 
 # Applicazione di un layer di convoluzione 2D con 64 filtri di dimensione 3x3
 c1 = tf.keras.layers.Conv2D(64, 3, padding="same", kernel_initializer="he_normal")(a1)
@@ -278,20 +303,22 @@ c9 = tf.keras.layers.Dropout(0.1)(c9)
 c10 = tf.keras.layers.Conv2D(2, 1, padding="same", kernel_initializer="he_normal")(c9)
 
 # Creazione di un tensore di deformazione
-displacement_tensor = tf.keras.layers.Conv2D(
+deformation_tensor = tf.keras.layers.Conv2D(
     2, kernel_size=3,activation='linear', padding="same", name="disp"
 )(c10)
+
+deformation_layer = tf.keras.layers.Lambda(apply_elastic_deformation)([input,deformation_tensor])
+
+# Apply the deformation to the moving image
+deformed_image = deformation_layer(input)
+
+# Create the U-Net model
+unet = tf.keras.Model(inputs=input, outputs=deformed_image)
+
 # Creazione del modello U-Net completo
-unet = tf.keras.Model(inputs=[inputs], outputs=[displacement_tensor])
-
-#print("displacement tensor:", displacement_tensor.shape)
-
-unet.compile(optimizer="adam", loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-              metrics=['accuracy'])
+unet = tf.keras.Model(inputs= input, outputs=deformed_image)
 
 
-#unet.summary()
-unet.fit(train_images_only, epochs=10, validation_data=val_images_only)
-
-# Effettua la fase di test per ottenere l'immagine trasformata
-# transformed_image = tf.nn.warpPerspective(test, displacement_tensor)
+unet.compile(optimizer="adam", loss="mse", metrics=['accuracy'])
+unet.summary()
+unet.fit(combined_image_dataset, epochs=10)
