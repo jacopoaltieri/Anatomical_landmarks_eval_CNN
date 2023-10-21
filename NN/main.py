@@ -9,12 +9,13 @@ A data augmentation process is also possible and present as a function, beware t
 """
 import os
 import matplotlib.pyplot as plt
-import cv2
+# import cv2
 
 import numpy as np
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # ignore TF unsupported NUMA warnings
 import tensorflow as tf
+import tensorflow_addons as tfa
 
 
 
@@ -27,8 +28,9 @@ BATCH_SIZE = 20
 
 print("Started dataset loading...")
 
-input_path = "/mnt/c/Users/jacop/Desktop/DL_Project/processed_dataset/" #if in wsl
-# input_path = r"C:\Users\vitto\Desktop\DL project\DL project github\augmented_dataset\augmented_dataset"  # if in windows
+#input_path = "/mnt/c/Users/jacop/Desktop/DL_Project/processed_dataset/" #if in wsl
+input_path = "/mnt/c/Users/vitto/Desktop/DL project/DL project github/processed_dataset/" #if in wsl
+# input_path = r"C:\Users\vitto\Desktop\DL project\DL project github\processed_dataset"  # if in windows
 #input_path = r"C:\Users\jacop\Desktop\DL_Project\processed_dataset"  # if in windows
 
 
@@ -211,7 +213,7 @@ combined_image_dataset = combined_image_dataset.shuffle(1000).batch(BATCH_SIZE)
 # Definizione della forma dell'input
 # - 256: Larghezza dell'immagine in pixel
 # - 256: Altezza dell'immagine in pixel
-# - 1 : Grayscale image
+# - 2 : 2 Grayscale images sovrapposte
 input_shape = (256, 256, 2)
 
 
@@ -292,10 +294,30 @@ displacement_tensor = tf.keras.layers.Conv2D(
 )(c10)
 
 
+# Creazione di una funzione per applicare la trasformazione di deformazione all'immagine di input
+def apply_deformation(image, displacement_tensor):
+    # Applica la trasformazione di deformazione all'immagine di input utilizzando il tensore di deformazione
+    deformed_image = tfa.image.dense_image_warp(image, displacement_tensor)
+    return deformed_image
+
+# Applicazione della trasformazione di deformazione a ciascuna immagine in train_images_only
+deformed_images = []
+for moving_image in train_images_only:
+    # Applicazione della trasformazione di deformazione all'immagine di input utilizzando il tensore di deformazione
+    deformed_image = apply_deformation(moving_image, displacement_tensor)
+    # Aggiunta dell'immagine deformata alla lista delle immagini deformate
+    deformed_images.append(deformed_image)
+
+# Creazione dell'array NumPy delle immagini deformate
+deformed_images_array = np.array(deformed_images)
+
+# Creazione del dataset delle immagini deformate
+deformed_images_dataset = tf.data.Dataset.from_tensor_slices(deformed_images_array)
+
 # Create the U-Net model
 unet = tf.keras.Model(inputs=input, outputs=displacement_tensor)
 
 
 unet.compile(optimizer="adam", loss="mse", metrics=['accuracy'])
 unet.summary()
-unet.fit(combined_image_dataset, epochs=10)
+history = unet.fit(combined_image_dataset, deformed_images_dataset, epochs=10)
