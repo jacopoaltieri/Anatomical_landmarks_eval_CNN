@@ -10,20 +10,15 @@ A data augmentation process is also possible and present as a function, beware t
 import os
 import matplotlib.pyplot as plt
 import cv2
-import elasticdeform
+
 import numpy as np
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # ignore TF unsupported NUMA warnings
 import tensorflow as tf
 
 
-# Avoid OOM errors by setting GPU Memory Consumption Growth
-gpus = tf.config.experimental.list_physical_devices("GPU")
-for gpu in gpus:
-    tf.config.experimental.set_memory_growth(gpu, True)
 
 BATCH_SIZE = 20
-
 ######################################## DATA COLLECTION ########################################
 
 # ================================================================ #
@@ -219,7 +214,7 @@ def apply_elastic_deformation(inputs):
     fixed_image, moving_image = tf.split(images, num_or_size_splits=2, axis=-1)
     tf.make_ndarray(deformation_tensor)
     # Apply the deformation to the moving image
-    deformed_image = elasticdeform.deform_grid(moving_image, deformation_tensor)
+    #deformed_image = elasticdeform.deform_grid(moving_image, deformation_tensor)
     
     return deformed_image
 
