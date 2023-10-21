@@ -27,9 +27,9 @@ BATCH_SIZE = 20
 
 print("Started dataset loading...")
 
-# input_path = "/mnt/c/Users/jacop/Desktop/DL_Project/processed_dataset/" #if in wsl
+input_path = "/mnt/c/Users/jacop/Desktop/DL_Project/processed_dataset/" #if in wsl
 # input_path = r"C:\Users\vitto\Desktop\DL project\DL project github\augmented_dataset\augmented_dataset"  # if in windows
-input_path = r"C:\Users\jacop\Desktop\DL_Project\processed_dataset"  # if in windows
+#input_path = r"C:\Users\jacop\Desktop\DL_Project\processed_dataset"  # if in windows
 
 
 # =========== Images =========== #
@@ -207,17 +207,6 @@ combined_image_dataset = combined_image_dataset.shuffle(1000).batch(BATCH_SIZE)
 # ================================================================ #
 # a: activation, c: convolution, p: pooling, u: upconvolution
 
-# Define the deformation function to be applied in the Lambda layer
-def apply_elastic_deformation(inputs):
-    images, deformation_tensor = inputs
-    # Split the inputs into the fixed and moving images
-    fixed_image, moving_image = tf.split(images, num_or_size_splits=2, axis=-1)
-    tf.make_ndarray(deformation_tensor)
-    # Apply the deformation to the moving image
-    #deformed_image = elasticdeform.deform_grid(moving_image, deformation_tensor)
-    
-    return deformed_image
-
 
 # Definizione della forma dell'input
 # - 256: Larghezza dell'immagine in pixel
@@ -298,20 +287,13 @@ c9 = tf.keras.layers.Dropout(0.1)(c9)
 c10 = tf.keras.layers.Conv2D(2, 1, padding="same", kernel_initializer="he_normal")(c9)
 
 # Creazione di un tensore di deformazione
-deformation_tensor = tf.keras.layers.Conv2D(
+displacement_tensor = tf.keras.layers.Conv2D(
     2, kernel_size=3,activation='linear', padding="same", name="disp"
 )(c10)
 
-deformation_layer = tf.keras.layers.Lambda(apply_elastic_deformation)([input,deformation_tensor])
-
-# Apply the deformation to the moving image
-deformed_image = deformation_layer(input)
 
 # Create the U-Net model
-unet = tf.keras.Model(inputs=input, outputs=deformed_image)
-
-# Creazione del modello U-Net completo
-unet = tf.keras.Model(inputs= input, outputs=deformed_image)
+unet = tf.keras.Model(inputs=input, outputs=displacement_tensor)
 
 
 unet.compile(optimizer="adam", loss="mse", metrics=['accuracy'])
