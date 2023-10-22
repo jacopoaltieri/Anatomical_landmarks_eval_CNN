@@ -18,7 +18,6 @@ import tensorflow as tf
 import tensorflow_addons as tfa
 
 
-
 BATCH_SIZE = 20
 ######################################## DATA COLLECTION ########################################
 
@@ -28,8 +27,8 @@ BATCH_SIZE = 20
 
 print("Started dataset loading...")
 
-#input_path = "/mnt/c/Users/jacop/Desktop/DL_Project/processed_dataset/" #if in wsl
-input_path = "/mnt/c/Users/vitto/Desktop/DL project/DL project github/processed_dataset/" #if in wsl
+input_path = "/mnt/c/Users/jacop/Desktop/DL_Project/processed_dataset/" #if in wsl
+#input_path = "/mnt/c/Users/vitto/Desktop/DL project/DL project github/processed_dataset/" #if in wsl
 # input_path = r"C:\Users\vitto\Desktop\DL project\DL project github\processed_dataset"  # if in windows
 #input_path = r"C:\Users\jacop\Desktop\DL_Project\processed_dataset"  # if in windows
 
@@ -178,7 +177,7 @@ plt.show()
 ######################################## U-NET ########################################
 
 print("Started U-Net training...")
-
+ 
 # We only need images in this part
 train_images_only = train.map(lambda x, y: x)
 test_images_only = test.map(lambda x, y: x)
@@ -188,14 +187,15 @@ val_images_only = val.map(lambda x, y: x)
 images_list = list(train_images_only)
 # Create a generator function to yield the combined image tensor
 def combined_image_generator():
-    for moving_image in train_images_only:
+    for moving_image in images_list:
         # The first image in train_images_only is considered as "fixed_image"
         fixed_image = images_list[0]
-        
+
         # Combine fixed and moving images into a single tensor
-        combined_image = tf.concat([fixed_image, moving_image], axis=-1)
-        
+        combined_image = tf.stack([fixed_image,moving_image],-1)
         yield combined_image
+
+
 # Create a TensorFlow dataset from the generator
 combined_image_dataset = tf.data.Dataset.from_generator(
     combined_image_generator,
@@ -293,31 +293,25 @@ displacement_tensor = tf.keras.layers.Conv2D(
     2, kernel_size=3,activation='linear', padding="same", name="disp"
 )(c10)
 
+# Define the function to extract the "bottom" tensor
+def extract_moving_img(input):
+    return input[:, :, :, 1:2]
+moving_image = tf.keras.layers.Lambda(extract_moving_img)(input)
 
 # Creazione di una funzione per applicare la trasformazione di deformazione all'immagine di input
-def apply_deformation(image, displacement_tensor):
+def apply_deformation(inputs):
+    #unpacking dell'input
+    image, displacement_tensor = inputs
     # Applica la trasformazione di deformazione all'immagine di input utilizzando il tensore di deformazione
     deformed_image = tfa.image.dense_image_warp(image, displacement_tensor)
     return deformed_image
 
-# Applicazione della trasformazione di deformazione a ciascuna immagine in train_images_only
-deformed_images = []
-for moving_image in train_images_only:
-    # Applicazione della trasformazione di deformazione all'immagine di input utilizzando il tensore di deformazione
-    deformed_image = apply_deformation(moving_image, displacement_tensor)
-    # Aggiunta dell'immagine deformata alla lista delle immagini deformate
-    deformed_images.append(deformed_image)
-
-# Creazione dell'array NumPy delle immagini deformate
-deformed_images_array = np.array(deformed_images)
-
-# Creazione del dataset delle immagini deformate
-deformed_images_dataset = tf.data.Dataset.from_tensor_slices(deformed_images_array)
+output = tf.keras.layers.Lambda(apply_deformation)([moving_image,displacement_tensor])
 
 # Create the U-Net model
 unet = tf.keras.Model(inputs=input, outputs=displacement_tensor)
-
-
 unet.compile(optimizer="adam", loss="mse", metrics=['accuracy'])
-unet.summary()
-history = unet.fit(combined_image_dataset, deformed_images_dataset, epochs=10)
+#unet.summary()
+predictions = unet.predict(combined_image_dataset)
+
+history = unet.fit(combined_image_dataset,predictions, epochs=10)
