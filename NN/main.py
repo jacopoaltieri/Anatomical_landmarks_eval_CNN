@@ -193,14 +193,15 @@ def combined_image_generator():
 
         # Combine fixed and moving images into a single tensor
         combined_image = tf.stack([fixed_image,moving_image],-1)
-        yield combined_image
+        yield (combined_image, fixed_image)
 
 
 # Create a TensorFlow dataset from the generator
 combined_image_dataset = tf.data.Dataset.from_generator(
     combined_image_generator,
-    output_signature=tf.TensorSpec(shape=(256, 256, 2), dtype=tf.float32)
-)
+    output_signature=(tf.TensorSpec(shape=(256, 256, 2), dtype=tf.float32),
+                      tf.TensorSpec(shape=(256, 256), dtype=tf.float32))
+    )
 combined_image_dataset = combined_image_dataset.shuffle(1000).batch(BATCH_SIZE)
 
 
@@ -309,9 +310,16 @@ def apply_deformation(inputs):
 output = tf.keras.layers.Lambda(apply_deformation)([moving_image,displacement_tensor])
 
 # Create the U-Net model
-unet = tf.keras.Model(inputs=input, outputs=displacement_tensor)
-unet.compile(optimizer="adam", loss="mse", metrics=['accuracy'])
-#unet.summary()
-predictions = unet.predict(combined_image_dataset)
+unet = tf.keras.Model(inputs=input, outputs=output)
 
-history = unet.fit(combined_image_dataset,predictions, epochs=10)
+# Create the custom loss (mse for now)
+def custom_loss(y_true, y_pred):
+    # Implement your custom loss here
+    return tf.losses.mean_squared_error(y_true, y_pred)
+
+
+unet.compile(loss=custom_loss, optimizer='adam', metrics=['accuracy'])
+#unet.summary()
+history = unet.fit(combined_image_dataset, epochs=10)
+
+ 
