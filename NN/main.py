@@ -13,6 +13,13 @@ import cv2                      # Needed when showing examples
 import numpy as np
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # ignore TF unsupported NUMA warnings
+
+
+# Filter out TFA warning
+#import warnings
+#warnings.filterwarnings("ignore", message="TFA has entered a minimal maintenance and release mode", category=Warning)
+
+
 import tensorflow as tf
 import tensorflow_addons as tfa
 
@@ -34,9 +41,9 @@ BATCH_SIZE = 4
 
 print("Started dataset loading...")
 
-input_path = "/mnt/c/Users/jacop/Desktop/DL_Project/processed_dataset/" #if in wsl
-#input_path = "/mnt/c/Users/vitto/Desktop/DL project/DL project github/processed_dataset/" #if in wsl
-# input_path = r"C:\Users\vitto\Desktop\DL project\DL project github\processed_dataset"  # if in windows
+#input_path = "/mnt/c/Users/jacop/Desktop/DL_Project/processed_dataset/" #if in wsl
+input_path = "/mnt/c/Users/vitto/Desktop/DL project/DL project github/processed_dataset/" #if in wsl
+#input_path = r"C:\Users\vitto\Desktop\DL project\DL project github\processed_dataset"  # if in windows
 #input_path = r"C:\Users\jacop\Desktop\DL_Project\processed_dataset"  # if in windows
 
 
@@ -341,12 +348,11 @@ unet = tf.keras.Model(inputs=input, outputs=output)
 
 # Create the custom loss (mse for now)
 def custom_loss(y_true, y_pred):
-    return tf.losses.mean_squared_error(y_true, y_pred)
+    return tf.losses.mean_squared_error(y_true, y_pred)*1/(256*256)
 
 
 unet.compile(loss=custom_loss, optimizer='adam', metrics=['accuracy'])
-unet.summary()
-
+#unet.summary()
 
 
 # Train the model
