@@ -8,9 +8,8 @@ The second model is a ResNet50 which will perform the actual keypoint detection.
 A data augmentation process is also possible and present as a function, beware that this might be time-consuming.
 """
 import os
-import matplotlib.pyplot as plt
-# import cv2
-
+import matplotlib.pyplot as plt # Needed when showing examples
+import cv2                      # Needed when showing examples
 import numpy as np
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # ignore TF unsupported NUMA warnings
@@ -18,7 +17,15 @@ import tensorflow as tf
 import tensorflow_addons as tfa
 
 
-BATCH_SIZE = 20
+# Avoid OOM errors by setting GPU Memory Consumption Growth
+gpus = tf.config.experimental.list_physical_devices('GPU')
+for gpu in gpus: 
+    tf.config.experimental.set_memory_growth(gpu, True)
+
+
+
+BATCH_SIZE = 4
+
 ######################################## DATA COLLECTION ########################################
 
 # ================================================================ #
@@ -107,9 +114,7 @@ train_labels = train_labels.map(lambda x: tf.py_function(load_labels, [x], [tf.f
 test_labels = tf.data.Dataset.list_files(input_path + "/labels/test/*.txt", shuffle=False)
 test_labels = test_labels.map(lambda x: tf.py_function(load_labels, [x], [tf.float16]))
 
-# - `val_labels`: Percorsi dei file di etichette nella directory "val"
 val_labels = tf.data.Dataset.list_files(input_path + "/labels/val/*.txt", shuffle=False)
-# Mappa la funzione `load_labels` su ciascun percorso di file e ottiene etichette di tipo float16
 val_labels = val_labels.map(lambda x: tf.py_function(load_labels, [x], [tf.float16]))
 
 
@@ -319,7 +324,16 @@ def custom_loss(y_true, y_pred):
 
 
 unet.compile(loss=custom_loss, optimizer='adam', metrics=['accuracy'])
-#unet.summary()
-history = unet.fit(combined_image_dataset, epochs=10)
+unet.summary()
 
- 
+
+
+# Train the model
+hist = unet.fit(combined_image_dataset, epochs=10)
+
+hist.history
+
+plt.plot(hist.history['loss'], color='teal', label='loss')
+plt.suptitle('Loss')
+plt.legend()
+plt.show()
