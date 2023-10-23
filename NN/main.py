@@ -189,12 +189,12 @@ test_images_only = test.map(lambda x, y: x)
 val_images_only = val.map(lambda x, y: x)
 
 
-images_list = list(train_images_only)
 # Create a generator function to yield the combined image tensor
-def combined_image_generator():
-    for moving_image in images_list:
+train_list = list(train_images_only)
+def train_image_generator():
+    for moving_image in train_list:
         # The first image in train_images_only is considered as "fixed_image"
-        fixed_image = images_list[0]
+        fixed_image = train_list[1]
 
         # Combine fixed and moving images into a single tensor
         combined_image = tf.stack([fixed_image,moving_image],-1)
@@ -202,13 +202,35 @@ def combined_image_generator():
 
 
 # Create a TensorFlow dataset from the generator
-combined_image_dataset = tf.data.Dataset.from_generator(
-    combined_image_generator,
+train_images_dataset = tf.data.Dataset.from_generator(
+    train_image_generator,
     output_signature=(tf.TensorSpec(shape=(256, 256, 2), dtype=tf.float32),
                       tf.TensorSpec(shape=(256, 256), dtype=tf.float32))
     )
-combined_image_dataset = combined_image_dataset.shuffle(1000).batch(BATCH_SIZE)
+train_images_dataset = train_images_dataset.shuffle(1000).batch(BATCH_SIZE)
 
+val_list = list(val_images_only)
+
+
+
+# Create a generator function to yield the combined image tensor for validation
+def val_image_generator():
+    for moving_image in val_list:
+        fixed_image = train_list[1]
+        combined_image = tf.stack([fixed_image, moving_image], -1)
+        yield (combined_image, fixed_image)
+
+# Create a TensorFlow dataset from the generator for validation
+val_images_dataset = tf.data.Dataset.from_generator(
+    val_image_generator,
+    output_signature=(
+        tf.TensorSpec(shape=(256, 256, 2), dtype=tf.float32),
+        tf.TensorSpec(shape=(256, 256), dtype=tf.float32)
+    )
+)
+
+# No need to shuffle for the validation set
+val_images_dataset = val_images_dataset.batch(BATCH_SIZE)
 
 # ================================================================ #
 #                        U-Net backbone                            #
@@ -319,7 +341,6 @@ unet = tf.keras.Model(inputs=input, outputs=output)
 
 # Create the custom loss (mse for now)
 def custom_loss(y_true, y_pred):
-    # Implement your custom loss here
     return tf.losses.mean_squared_error(y_true, y_pred)
 
 
@@ -329,11 +350,22 @@ unet.summary()
 
 
 # Train the model
-hist = unet.fit(combined_image_dataset, epochs=10)
+history = unet.fit(train_images_dataset, epochs=10, validation_data=val_images_dataset)
 
-hist.history
+# Plot training & validation accuracy values
+plt.plot(history.history['accuracy'])
+plt.plot(history.history['val_accuracy'])
+plt.title('Model Accuracy')
+plt.ylabel('Accuracy')
+plt.xlabel('Epoch')
+plt.legend(['Train', 'Validation'], loc='upper left')
+plt.show()
 
-plt.plot(hist.history['loss'], color='teal', label='loss')
-plt.suptitle('Loss')
-plt.legend()
+# Plot training & validation loss values
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('Model Loss')
+plt.ylabel('Loss')
+plt.xlabel('Epoch')
+plt.legend(['Train', 'Validation'], loc='upper left')
 plt.show()
