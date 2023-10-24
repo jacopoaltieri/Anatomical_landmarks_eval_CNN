@@ -6,7 +6,7 @@ The processed dataset will be stored in "processed_dataset" in your current work
 It will find the matching image-labels pair from the original dataset and sort them into train, test and val folders based on a user-chosen percentage
 It will also automatically resize images and labels according to a user-chosen size
 
-You need to run this code only if working from the original dataset
+You need to run this code only if working from the original dataset.
 """
 
 import glob
