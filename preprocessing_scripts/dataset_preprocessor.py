@@ -23,6 +23,7 @@ def label_writer(path,coords):
         for i, (x,y) in enumerate(coords, start=1):
             f.write(f"{i}\t{x}\t{y}\n")
 
+MIN_SIZE = 300 # minimum required size
 NEW_SIZE = 256  # new image size
 # percentages of train,val and test dataset
 TRAIN_PERC = 0.60 
@@ -76,6 +77,9 @@ print("Rescaling images to 256x256 pixels...")
 for i, j in enumerate(tqdm(matching)):
     im = cv2.imread(input_path+"/"+j+".jpg", cv2.IMREAD_UNCHANGED)
     original_size = im.shape[:2]
+    if max(original_size) < MIN_SIZE:
+        continue  # Discard small images
+    
     resized_image = cv2.resize(im,(int(NEW_SIZE),int(NEW_SIZE)))
 
     path = input_path+"/"+j+".txt"
