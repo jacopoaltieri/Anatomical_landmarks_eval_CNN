@@ -79,6 +79,10 @@ for i, j in enumerate(tqdm(matching)):
     original_size = im.shape[:2]
     if max(original_size) < MIN_SIZE:
         continue  # Discard small images
+        
+    # converting grayscale images to rgb
+    if len(im.shape) == 2:
+        im = cv2.cvtColor(im, cv2.COLOR_GRAY2RGB)
     
     resized_image = cv2.resize(im,(int(NEW_SIZE),int(NEW_SIZE)))
 
