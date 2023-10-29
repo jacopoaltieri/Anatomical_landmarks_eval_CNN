@@ -63,8 +63,8 @@ fixed_label_path = "/mnt/c/Users/jacop/Desktop/DL_Project/1124.txt"
 ######################################## Importing Dataset #######################################################
 print("Started dataset loading...")
 
-input_path = "/mnt/c/Users/jacop/Desktop/DL_Project/processed_dataset/" #if in wsl
-#input_path = "/mnt/c/Users/vitto/Desktop/DL project/DL project github/processed_dataset/" #if in wsl
+#input_path = "/mnt/c/Users/jacop/Desktop/DL_Project/processed_dataset/" #if in wsl
+input_path = "/mnt/c/Users/vitto/Desktop/DL project/DL project github/processed_dataset/" #if in wsl
 #input_path = "C:/Users/vitto/Desktop/DL project/DL project github/processed_dataset/"  # if in windows
 #input_path = "C:/Users/jacop/Desktop/DL_Project/processed_dataset/"  # if in windows
 
