@@ -14,8 +14,8 @@ import numpy as np
 import pickle
 
 # Filter out TFA warning
-#import warnings
-#warnings.filterwarnings("ignore", message="TFA has entered a minimal maintenance and release mode", category=Warning)
+import warnings
+warnings.filterwarnings("ignore", message="TFA has entered a minimal maintenance and release mode", category=Warning)
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # ignore TF unsupported NUMA warnings
 from keras import regularizers
@@ -27,7 +27,13 @@ import tensorflow_addons as tfa
 gpus = tf.config.experimental.list_physical_devices('GPU')
 for gpu in gpus: 
     tf.config.experimental.set_memory_growth(gpu, True)
-
+    
+physical_devices = tf.config.experimental.list_physical_devices('GPU')
+if len(physical_devices) > 0:
+    print("We got a GPU!")
+    tf.config.experimental.set_memory_growth(physical_devices[0], True)
+else:
+    print("Sorry, no GPU for you...")
 
 
 ######################################## HYPERPARAMETERS AND OTHER OPTIONS ########################################
@@ -35,12 +41,12 @@ for gpu in gpus:
 TRAINING = True
 
 # Choose the name of the saved dataset
-MODEL_NAME = "unet_100epochs.keras"
-TRAINING_HISTORY = "training_history.pickle"
+MODEL_NAME = "unet_150epochs.keras"
+TRAINING_HISTORY = "training_history_150.pickle"
 
 # Training hyperparameters
 BATCH_SIZE = 3
-EPOCHS = 100
+EPOCHS = 150
 LRELU_ALPHA = 0.01 # alpha coefficient of LeakyReLU
 L2REG = 0.0001 # kernel regularizer coefficient
 
@@ -53,7 +59,7 @@ EPSILON=1e-08
 # ReduceLROnPlateau hyperparameters
 RLR_FACTOR = 0.2
 RLR_PATIENCE = 5
-RLR_MIN = 0.001
+RLR_MIN = 0.00001
 
 # Chose the fixed image-label pair you want to train on
 
@@ -146,8 +152,8 @@ fixed_dataset = tf.data.Dataset.zip((fixed_image,fixed_label))
 
 
 
-
 ######################################## U-NET #######################################################
+
 
 # =========== Generators =========== #
 print("Creating generators...")
@@ -240,6 +246,7 @@ test_images_dataset = test_images_dataset.batch(BATCH_SIZE)
 # a: activation, c: convolution,
 # p: pooling, u: upconvolution, bn: batch normalization
 
+
 input_shape = (256, 256, 2) # Two images, one fixed and one moving
 input = tf.keras.layers.Input(shape=input_shape)
 
@@ -248,10 +255,10 @@ input = tf.keras.layers.Input(shape=input_shape)
 # Applying Leaky ReLU activation function with an alpha coefficient
 a1 = tf.keras.layers.LeakyReLU(alpha=LRELU_ALPHA)(input)
 
-# Applying a 2D convolution layer with 64 filters of size 3x3
+# Applying a 2D convolution layer with 64 filters of size 3x3, regularization L2 weight decay
 c1 = tf.keras.layers.Conv2D(64, 3, padding="same", kernel_initializer="he_normal", kernel_regularizer=regularizers.l2(L2REG))(a1)
 
-# Applying batch normalization
+# Applying batch normalization to improve stability and convergence
 bn1 = tf.keras.layers.BatchNormalization()(c1)
 
 # Applying a Dropout layer with a dropout rate of 10%
@@ -366,7 +373,7 @@ unet.compile(optimizer=adam, loss='mse', metrics='mse')
 
 # =========== Model Training =========== #
 if TRAINING:
-    print("training the model...")
+    print("Training the model...")
     history = unet.fit(train_images_dataset, epochs=EPOCHS, validation_data=val_images_dataset, callbacks=[reduce_lr])
     
     # save the model
@@ -378,6 +385,7 @@ if TRAINING:
     with open(training_hist_name, 'wb') as file_pi:
         pickle.dump(history.history, file_pi)
         
+
 # Load a pretrained model
 unet = tf.keras.models.load_model(MODEL_NAME,safe_mode=False)
 # Load the training history 
@@ -408,11 +416,11 @@ print(f"Plot saved as {os.getcwd()}'/loss.png'")
 
 
 # =========== Model Testing =========== #
+
 # Evaluate the model on the test dataset
 print("Evaluate on test data")
 results = unet.evaluate(test_images_dataset)
 print("Test loss, Test accuracy:", results)
-
 
 # plotting a deformation example from the U-Net output
 test_image_list = list(test_images_only)
@@ -512,9 +520,10 @@ def plot_with_landmarks_and_ROI(image, landmarks):
 
     # Show the plot
     #plt.show()
-    plt.savefig('plot_landm.png')
+
     
 plot_with_landmarks_and_ROI(fixed_image, fixed_labels)
+plt.savefig('true_landmarks.png')
 
 def deform_landmarks(landmarks, displacement_tensor):
     """
@@ -547,3 +556,4 @@ def deform_landmarks(landmarks, displacement_tensor):
 deformed_landmarks= deform_landmarks(fixed_labels, displacement_model_output)
 
 plot_with_landmarks_and_ROI(test_image, deformed_landmarks)
+plt.savefig('deformed_landmarks.png')
