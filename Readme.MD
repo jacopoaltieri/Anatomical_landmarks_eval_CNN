@@ -47,5 +47,5 @@ The images should be 256x256 px, and the labels should be a tab-separated .txt f
 An example of the correct formatting for images and labels can be found as the "fixed image/label" in the *NN* directory of this repository.
 
 ### Network
-
+Download the script *NN/main.py*. In the first section, set the paths to the processed dataset, the image-label pair chosen as the fixed one (you can use the one provided in the same folder); then choose if the network should be trained or should work on a pre-trained model.
 

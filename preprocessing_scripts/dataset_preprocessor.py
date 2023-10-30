@@ -33,7 +33,6 @@ def count_lines(filename):
 ###### Parameters ######
 
 MIN_SIZE = 300 # minimum required size
-NEW_SIZE = 256  # new image size
 
 # percentages of train,val and test dataset
 TRAIN_PERC = 0.60 
@@ -88,15 +87,15 @@ for i, j in enumerate(tqdm(matching)):
     if len(im.shape) == 2:
         im = cv2.cvtColor(im, cv2.COLOR_GRAY2RGB)
     
-    resized_image = cv2.resize(im,(int(NEW_SIZE),int(NEW_SIZE)))
+    resized_image = cv2.resize(im,(int(256),int(256)))
 
     path = input_path+"/"+j+".txt"
     data = pd.read_csv(path, sep="[;,\\t]", engine="python")
     coords = np.array(list(zip(data.loc[:, "X"], data.loc[:, "Y"])))
 
-    # rescale coords to NEW_SIZE
-    scale_x = NEW_SIZE / original_size[1]  # Calculate scaling factor for X
-    scale_y = NEW_SIZE / original_size[0]  # Calculate scaling factor for Y
+    # rescale coords to 256
+    scale_x = 256 / original_size[1]  # Calculate scaling factor for X
+    scale_y = 256 / original_size[0]  # Calculate scaling factor for Y
     new_coords = coords * np.array([scale_x, scale_y])
 
     if i<int(len(matching)*TRAIN_PERC):        
