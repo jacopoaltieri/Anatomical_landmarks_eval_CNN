@@ -27,16 +27,24 @@ The 14 landmarks to be found by this network are listed below, ordered according
 
 ## Repository organization
 * **preprocessing_scripts**: contains the preprocessor script: use it if you are willing to work with the original dataset. It will find all the matching image-label pairs and sort them into three categories (train, test, val).
-* **NN**: contains the network, the pre-trained model and its configuration file.
+* **NN**: contains the Network, the pre-trained model and its training history. It also contains the image-label pair chosen as the fixed image during training.
+* **Outputs**: contains the Loss and Metric plots of the pre-trained model, along with some output examples
   
 ## Dataset structure
 The main directory needs two subfolders called "images" and "labels" respectively. Each image in the dataset has a corresponding text file with the same name as the image file and the ".txt" extension.
 
 ## Usage
+The script runs in python 3.10.12, please use this version to assure compatibility, expecially if you wish to use the pre-trained model.
+
 First run the following command to ensure that all the required packages are installed and up to date: `pip install -r .\requirements.txt`.
 ### Preprocessing
-Based on which dataset you decide to use, you may need some preliminary work:
-* **If working with the original dataset**: Extract the dataset and download *preprocessing_scripts/dataset_preprocessor.py*. Run the python script, it will create the processed and rescaled dataset in your current working directory, ready to be fed to the CNN.
+**If working with the original dataset**, you need to pass it to the preprocessor before feeding it to the NN.
+Extract the dataset and download *preprocessing_scripts/dataset_preprocessor.py*. Run the python script, it will create the processed and rescaled dataset in your current working directory. You can choose the minimum size of the images and the train/test/val split percentage by editing the corresponding Parameters in the script.
+
+If you are instead working with your personal dataset, please make sure that the set you feed to the network has the following structure:
+Two directories, "images" and "labels", each containing three subfolders named "train", "test" and "val".
+The images should be 256x256 px, and the labels should be a tab-separated .txt file containing a header and then 14 rows with the index of the landmark, its X coordinate and its Y coordinate. Corresponding images and labels should have the same name.
+An example of the correct formatting for images and labels can be found as the "fixed image/label" in the *NN* directory of this repository.
 
 ### Network
 

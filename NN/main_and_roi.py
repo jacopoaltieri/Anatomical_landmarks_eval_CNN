@@ -35,12 +35,12 @@ for gpu in gpus:
 TRAINING = True
 
 # Choose the name of the saved dataset
-MODEL_NAME = "unet_100epochs.keras"
-TRAINING_HISTORY = "training_history.pickle"
+MODEL_NAME = "unet_100epochs2.keras"
+TRAINING_HISTORY = "training_history2.pickle"
 
 # Training hyperparameters
 BATCH_SIZE = 3
-EPOCHS = 100
+EPOCHS = 150
 LRELU_ALPHA = 0.01 # alpha coefficient of LeakyReLU
 L2REG = 0.0001 # kernel regularizer coefficient
 
@@ -53,23 +53,23 @@ EPSILON=1e-08
 # ReduceLROnPlateau hyperparameters
 RLR_FACTOR = 0.2
 RLR_PATIENCE = 5
-RLR_MIN = 0.001
+RLR_MIN = 0.00001
 
 # Chose the fixed image-label pair you want to train on
 
-#fixed_image_path = "/mnt/c/Users/jacop/Desktop/DL_Project/1124.jpg"
-#fixed_label_path = "/mnt/c/Users/jacop/Desktop/DL_Project/1124.txt"
+fixed_image_path = "/mnt/c/Users/jacop/Desktop/DL_Project/1124.jpg"
+fixed_label_path = "/mnt/c/Users/jacop/Desktop/DL_Project/1124.txt"
 
-fixed_image_path = "/mnt/c/Users/vitto/Desktop/DL project/DL project github/1124.jpg"
-fixed_label_path = "/mnt/c/Users/vitto/Desktop/DL project/DL project github/1124.txt"
+# fixed_image_path = "/mnt/c/Users/vitto/Desktop/DL project/DL project github/1124.jpg"
+# fixed_label_path = "/mnt/c/Users/vitto/Desktop/DL project/DL project github/1124.txt"
 
 
 ######################################## Importing Dataset #######################################################
 print("Started dataset loading...")
 
-#input_path = "/mnt/c/Users/jacop/Desktop/DL_Project/processed_dataset/" #if in wsl
+input_path = "/mnt/c/Users/jacop/Desktop/DL_Project/processed_dataset/" #if in wsl
 #input_path = "C:/Users/jacop/Desktop/DL_Project/processed_dataset/"  # if in windows
-input_path = "/mnt/c/Users/vitto/Desktop/DL project/DL project github/processed_dataset/" #if in wsl
+#input_path = "/mnt/c/Users/vitto/Desktop/DL project/DL project github/processed_dataset/" #if in wsl
 #input_path = "C:/Users/vitto/Desktop/DL project/DL project github/processed_dataset/"  # if in windows
 
 
@@ -407,6 +407,8 @@ plt.close()
 print(f"Plot saved as {os.getcwd()}'/loss.png'")
 
 
+######################################## RESULTS #######################################################
+
 # =========== Model Testing =========== #
 # Evaluate the model on the test dataset
 print("Evaluate on test data")
@@ -414,7 +416,7 @@ results = unet.evaluate(test_images_dataset)
 print("Test loss, Test accuracy:", results)
 
 
-# plotting a deformation example from the U-Net output
+# =========== Plotting from U-Net =========== #
 test_image_list = list(test_images_only)
 test_image = test_image_list[0]
 
@@ -453,7 +455,7 @@ plt.close()
 print(f"Plot saved as {os.getcwd()}'/unet_deformation_example.png'")
 
 
-# plotting a deformation example by extracting the displacement tensor
+# =========== Plotting via displacement tensor =========== #
 displacement_model = tf.keras.Model(inputs=unet.input, outputs=unet.get_layer('disp').output)
 displacement_model_output = displacement_model.predict(test_feed)
 
@@ -488,6 +490,39 @@ plt.savefig('tensor_deformation_example.png')
 plt.close()
 print(f"Plot saved as {os.getcwd()}'/tensor_deformation_example.png'")
 
+# =========== Plotting inverse transformation =========== #
+
+inverse_transform = -displacement_model_output
+# expand the fixed_image to match displacement_model_output dimensions
+fixed_image_expanded = np.expand_dims(fixed_image, axis=0)
+fixed_image_expanded = np.expand_dims(fixed_image_expanded, axis=3)
+
+deformed_image = tfa.image.dense_image_warp(fixed_image_expanded, -inverse_transform)
+
+fig, axs = plt.subplots(2, 2, figsize=(10, 10))
+fig.suptitle("Warping via displacement tensor") 
+axs[0, 0].imshow(fixed_image, cmap='gray')
+axs[0, 0].set_title('Fixed Image')
+
+axs[0, 1].imshow(test_image, cmap='gray')
+axs[0, 1].set_title('Moving Image')
+
+axs[1, 0].imshow(deformed_image[0], cmap='gray')
+axs[1, 0].set_title('Deformed Image')
+
+axs[1, 1].imshow(test_image, cmap='gray')
+axs[1, 1].imshow(deformed_image[0], alpha=0.4)
+axs[1, 1].set_title('Overlapping Image')
+
+# Remove axis labels and ticks
+for ax in axs.flat:
+    ax.label_outer()
+
+# Adjust spacing between subplots
+plt.tight_layout()
+plt.savefig('inverse_deformation_example.png')
+plt.close()
+print(f"Plot saved as {os.getcwd()}'/inverse_deformation_example.png'")
 
 # =========== Adding Landmarks and ROI =========== #
 
@@ -512,38 +547,33 @@ def plot_with_landmarks_and_ROI(image, landmarks):
 
     # Show the plot
     #plt.show()
-    plt.savefig('plot_landm.png')
+   
     
 plot_with_landmarks_and_ROI(fixed_image, fixed_labels)
+plt.savefig('plot_landm.png')
 
-def deform_landmarks(landmarks, displacement_tensor):
-    """
-    Deform landmarks based on a displacement tensor.
 
-    Args:
-        landmarks (np.ndarray): An array of shape (N, 2) containing landmark coordinates.
-        displacement_tensor (np.ndarray): The displacement tensor with shape (1, H, W, 2).
 
-    Returns:
-        np.ndarray: Deformed landmarks based on the displacement tensor.
-    """
-    deformed_landmarks = []
+def apply_deformation_tensor(coords, displacement_tensor):
+    # Convert the coordinates to a list of tuples
+    coords = [(int(coords[i]), int(coords[i+1])) for i in range(0, len(coords), 2)]
 
-    for i in range(0, len(landmarks), 2):
-        x, y = landmarks[i], landmarks[i + 1]
+    # Reshape the displacement tensor
+    displacement_tensor = displacement_tensor[0]  # extract first element of batch
+    displacement_tensor = np.reshape(displacement_tensor, (256, 256, 2))
 
-        # Get the displacement values from the displacement tensor
-        disp_x = displacement_tensor[0, int(y), int(x), 0]
-        disp_y = displacement_tensor[0, int(y), int(x), 1]
+    # Compute the displacement vector for each point
+    displacement_vectors = np.zeros_like(coords)
+    for i in range(len(coords)):
+        x, y = coords[i]
+        displacement_vectors[i] = displacement_tensor[x, y]
+        
+    # Add the displacement vectors to the original coordinates
+    deformed_coords = coords + displacement_vectors
 
-        # Apply displacement to the landmarks
-        new_x = x + disp_x
-        new_y = y + disp_y
+    return deformed_coords.flatten()
 
-        deformed_landmarks.extend([new_x, new_y])
-
-    return np.array(deformed_landmarks)
-
-deformed_landmarks= deform_landmarks(fixed_labels, displacement_model_output)
+deformed_landmarks= apply_deformation_tensor(fixed_labels, -displacement_model_output)
 
 plot_with_landmarks_and_ROI(test_image, deformed_landmarks)
+plt.savefig('plot_landm_def.png')
