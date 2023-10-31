@@ -43,9 +43,19 @@ Extract the dataset and download *preprocessing_scripts/dataset_preprocessor.py*
 
 If you are instead working with your personal dataset, please make sure that the set you feed to the network has the following structure:
 Two directories, "images" and "labels", each containing three subfolders named "train", "test" and "val".
-The images should be 256x256 px, and the labels should be a tab-separated .txt file containing a header and then 14 rows with the index of the landmark, its X coordinate and its Y coordinate. Corresponding images and labels should have the same name.
+The images should be 256x256 px in RGB, and the labels should be a tab-separated .txt file containing a header and then 14 rows with the index of the landmark, its X coordinate and its Y coordinate. Corresponding images and labels should have the same name.
 An example of the correct formatting for images and labels can be found as the "fixed image/label" in the *NN* directory of this repository.
 
 ### Network
-Download the script *NN/main.py*. In the first section, set the paths to the processed dataset, the image-label pair chosen as the fixed one (you can use the one provided in the same folder); then choose if the network should be trained or should work on a pre-trained model.
+This neural network uses a U-Net architecture to perform deformable image registration, which involves aligning two images by deforming one of them to match the other. The network takes in two images - a fixed image and a moving image - and outputs a deformed version of the moving image that aligns with the fixed image. In the last part it will deform the landmark position based on the fixed image with the displacement tensor, and apply it to the moving image.
 
+Download the script *NN/main.py*. In the first section, set the paths to the processed dataset, the image-label pair chosen as the fixed one (you can use the one provided in the same folder); then choose if the network should be trained or should work on a pre-trained model, and set the hyperparameters. If you choose to train, it will save plots about the model loss and the model MSE. 
+
+The net will then evaluate the model on the test dataset, and apply the displacement tensor to find the coarse landmark position. The plots will be saved in the working directory.
+
+#### Requirements
+- Python 3.6 or higher
+- TensorFlow 2.0 or higher
+- NumPy
+- Matplotlib
+- Pandas
