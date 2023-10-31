@@ -47,8 +47,8 @@ fixed_label_path = "fixed_lab.txt"
 TRAINING = False
 
 # Choose the name of the model to save/load
-MODEL_NAME = "Anatomical_landmarks_eval_CNN/unet_100epochs_prova.keras"
-TRAINING_HISTORY = "Anatomical_landmarks_eval_CNN/training_history_prova.pickle"
+MODEL_NAME = "unet_pretrained.keras"
+TRAINING_HISTORY = "unet_pretrained_history.pickle"
 
 # Training hyperparameters
 BATCH_SIZE = 3
