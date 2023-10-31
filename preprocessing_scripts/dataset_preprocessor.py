@@ -3,8 +3,10 @@ AUTHORS: Altieri J. , Mazzini V.
 
 This module will rearrange the dataset in the correct format in order for it to be fed to the NN;
 The processed dataset will be stored in "processed_dataset" in your current working directory.
-It will find the matching image-labels pair from the original dataset and sort them into train, test and val folders based on a user-chosen percentage
-It will also automatically resize images and labels to 256x256 pixels, and discard all the images smaller than a threshold chosen by the user
+It will find the matching image-labels pair from the original dataset and sort them into train, 
+test and val folders based on a user-chosen percentage.
+It will also automatically resize images and labels to 256x256 pixels, and discard all the images smaller than 
+a threshold size chosen by the user.
 
 You need to run this code only if working from the original dataset.
 """
@@ -26,7 +28,8 @@ def write_labels(path,coords):
 
     Args:
         path (str): The path to the file where the coordinates will be written.
-        coords (list): A list of coordinate tuples, where each tuple contains the X and Y coordinates of a landmark.
+        coords (list): A list of coordinate tuples, where each tuple contains the X and Y 
+        coordinates of a landmark.
 
     Returns:
         None
@@ -50,17 +53,18 @@ def count_lines(filename):
 
 ######################################## PARAMETERS ########################################
 
-MIN_SIZE = 300 # minimum required size
+# Minimum image size
+MIN_SIZE = 300 
 
-# percentages of train,val and test dataset
+# Percentages of train, validation and test dataset
 TRAIN_PERC = 0.60 
 VAL_PERC = 0.20
 TEST_PERC = 0.20
 
 
-######################################## SCRIPT ########################################
+######################################## SCRIPT ###########################################
 
-input_path=input("Provide the path for the dataset: ")
+input_path = input("Provide the path for the dataset:")
 
 print("Preprocessing started...")
 
@@ -80,9 +84,10 @@ for filename in os.listdir(input_path):
         new_filepath = os.path.join(input_path, new_filename)
 
 
-    
 label_files = glob.glob("**/*[!README].txt", root_dir=input_path, recursive=True)
-label_files = [file for file in label_files if count_lines(input_path+"/"+file) == 15]  #removes files with more/less than 14 landmarks
+
+# Removes files with more/less than 14 landmarks
+label_files = [file for file in label_files if count_lines(input_path+"/"+file) == 15]  
 
 img_files = [file for file in glob.glob("**/*.jpg", root_dir=input_path, recursive=True) if "-" not in file]
 
@@ -97,8 +102,9 @@ print(f"Rescaling to 256x256 pixels; discarding images smaller than {MIN_SIZE} .
 for i, j in enumerate(tqdm(matching)):
     im = cv2.imread(input_path+"/"+j+".jpg", cv2.IMREAD_UNCHANGED)
     original_size = im.shape[:2]
+    # Discard images smaller than threshold size
     if max(original_size) < MIN_SIZE:
-        continue  # discard images smaller than threshold
+        continue 
         
     # Converting grayscale images to rgb
     if len(im.shape) == 2:

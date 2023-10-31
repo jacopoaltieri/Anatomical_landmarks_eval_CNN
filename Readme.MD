@@ -1,7 +1,7 @@
 # Identification of anatomical landmarks using CNN
 
 ## Introduction
-The task of this project is to develop a CNN to identify 14 anatomical landmarks from lateral cephalometric radiographs.
+The task of this project is to develop a CNN to do a coarse detection of 14 anatomical landmarks from lateral cephalometric radiographs.
 
 ## Cephalometry principles
 To carry out cephalometry, the X-ray tube is placed at 1.5 meters away from the mid sagittal plane, while the detector is at 15 cm on the other side.
@@ -28,7 +28,7 @@ The 14 landmarks to be found by this network are listed below, ordered according
 ## Repository organization
 * **preprocessing_scripts**: contains the preprocessor script: use it if you are willing to work with the original dataset. It will find all the matching image-label pairs and sort them into three categories (train, test, val).
 * **NN**: contains the Network, the pre-trained model and its training history. It also contains the image-label pair chosen as the fixed image during training.
-* **Outputs**: contains the Loss and Metric plots of the pre-trained model, along with some output examples
+* **Outputs**: contains the Loss and Metric plots of the pre-trained model, along with some output examples.
   
 ## Dataset structure
 The main directory needs two subfolders called "images" and "labels" respectively. Each image in the dataset has a corresponding text file with the same name as the image file and the ".txt" extension.
@@ -36,14 +36,14 @@ The main directory needs two subfolders called "images" and "labels" respectivel
 ## Usage
 The script runs in python 3.10.12, please use this version to assure compatibility, especially if you wish to use the pre-trained model.
 #### Requirements
-keras==2.14.0
-matplotlib==3.8.0
-numpy==1.26.1
-opencv_python_headless==4.8.1.78 (or opencv_python==4.8.1.78 if running on Windows)
-pandas==2.1.2
-tensorflow==2.14.0
-tensorflow_addons==0.22.0
-tqdm==4.66.1
+- keras==2.14.0
+- matplotlib==3.8.0
+- numpy==1.26.1
+- opencv_python_headless==4.8.1.78 (or opencv_python==4.8.1.78 if running on Windows)
+- pandas==2.1.2
+- tensorflow==2.14.0
+- tensorflow_addons==0.22.0
+- tqdm==4.66.1
 
 First run the following command to ensure that all the required packages are installed and up to date:
 * If on Windows: `pip install -r .\requirements_windows.txt`.
