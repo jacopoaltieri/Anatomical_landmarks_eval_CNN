@@ -1,7 +1,7 @@
 # Identification of anatomical landmarks using CNN
 
 ## Introduction
-The task of this project is to develop a CNN to identify 14 anatomical landmarks from lateral cephalometric radiographs.
+The task of this project is to develop a CNN to do a coarse detection of 14 anatomical landmarks from lateral cephalometric radiographs.
 
 ## Cephalometry principles
 To carry out cephalometry, the X-ray tube is placed at 1.5 meters away from the mid sagittal plane, while the detector is at 15 cm on the other side.
@@ -28,7 +28,7 @@ The 14 landmarks to be found by this network are listed below, ordered according
 ## Repository organization
 * **preprocessing_scripts**: contains the preprocessor script: use it if you are willing to work with the original dataset. It will find all the matching image-label pairs and sort them into three categories (train, test, val).
 * **NN**: contains the Network, the pre-trained model and its training history. It also contains the image-label pair chosen as the fixed image during training.
-* **Outputs**: contains the Loss and Metric plots of the pre-trained model, along with some output examples
+* **Outputs**: contains the Loss and Metric plots of the pre-trained model, along with some output examples.
   
 ## Dataset structure
 The main directory needs two subfolders called "images" and "labels" respectively. Each image in the dataset has a corresponding text file with the same name as the image file and the ".txt" extension.
