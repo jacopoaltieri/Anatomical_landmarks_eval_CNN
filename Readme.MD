@@ -34,9 +34,21 @@ The 14 landmarks to be found by this network are listed below, ordered according
 The main directory needs two subfolders called "images" and "labels" respectively. Each image in the dataset has a corresponding text file with the same name as the image file and the ".txt" extension.
 
 ## Usage
-The script runs in python 3.10.12, please use this version to assure compatibility, expecially if you wish to use the pre-trained model.
+The script runs in python 3.10.12, please use this version to assure compatibility, especially if you wish to use the pre-trained model.
+#### Requirements
+keras==2.14.0
+matplotlib==3.8.0
+numpy==1.26.1
+opencv_python_headless==4.8.1.78 (or opencv_python==4.8.1.78 if running on Windows)
+pandas==2.1.2
+tensorflow==2.14.0
+tensorflow_addons==0.22.0
+tqdm==4.66.1
 
-First run the following command to ensure that all the required packages are installed and up to date: `pip install -r .\requirements.txt`.
+First run the following command to ensure that all the required packages are installed and up to date:
+* If on Windows: `pip install -r .\requirements_windows.txt`.
+* If on Linux: `pip install -r .\requirements_linux.txt`.
+
 ### Preprocessing
 **If working with the original dataset**, you need to pass it to the preprocessor before feeding it to the NN.
 Extract the dataset and download *preprocessing_scripts/dataset_preprocessor.py*. Run the python script, it will create the processed and rescaled dataset in your current working directory. You can choose the minimum size of the images and the train/test/val split percentage by editing the corresponding Parameters in the script.
@@ -53,9 +65,4 @@ Download the script *NN/main.py*. In the first section, set the paths to the pro
 
 The net will then evaluate the model on the test dataset, and apply the displacement tensor to find the coarse landmark position. The plots will be saved in the working directory.
 
-#### Requirements
-- Python 3.6 or higher
-- TensorFlow 2.0 or higher
-- NumPy
-- Matplotlib
-- Pandas
+
