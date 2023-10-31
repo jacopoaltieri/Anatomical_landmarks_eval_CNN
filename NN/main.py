@@ -552,7 +552,7 @@ print(f"Plot saved as {os.getcwd()}'/inverse_deformation_example.png'")
 fixed_labels = fixed_dataset.as_numpy_iterator().next()[1][0]
 
 
-def plot_with_landmarks_and_ROI(image, landmarks, bbox_size=15):
+def plot_with_landmarks_and_ROI(image, landmarks):
     # Create a figure and axis for plotting
     fig, ax = plt.subplots()
     ax.imshow(image, cmap="gray")
