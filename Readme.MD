@@ -54,7 +54,8 @@ Download the script *NN/main.py*. In the first section, set the paths to the pro
 The net will then evaluate the model on the test dataset, and apply the displacement tensor to find the coarse landmark position. The plots will be saved in the working directory.
 
 ## Requirements
-Python 3.6 or higher
-TensorFlow 2.0 or higher
-NumPy
-Matplotlib
+- Python 3.6 or higher
+- TensorFlow 2.0 or higher
+- NumPy
+- Matplotlib
+- Pandas
