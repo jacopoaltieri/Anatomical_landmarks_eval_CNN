@@ -47,7 +47,7 @@ The images should be 256x256 px in RGB, and the labels should be a tab-separated
 An example of the correct formatting for images and labels can be found as the "fixed image/label" in the *NN* directory of this repository.
 
 ### Network
-This neural network uses a U-Net architecture to perform deformable image registration, which involves aligning two images by deforming one of them to match the other. The network takes in two images - a fixed image and a moving image - and outputs a deformed version of the moving image that aligns with the fixed image. In the last part it will deform the landmark position based on the fixed image with the displacement tensor, and apply it to the test image. 
+This neural network uses a U-Net architecture to perform deformable image registration, which involves aligning two images by deforming one of them to match the other. The network takes in two images - a fixed image and a moving image - and outputs a deformed version of the moving image that aligns with the fixed image. In the last part it will deform the landmark position based on the fixed image with the displacement tensor, and apply it to the moving image.
 
 Download the script *NN/main.py*. In the first section, set the paths to the processed dataset, the image-label pair chosen as the fixed one (you can use the one provided in the same folder); then choose if the network should be trained or should work on a pre-trained model, and set the hyperparameters. If you choose to train, it will save plots about the model loss and the model MSE. 
 
