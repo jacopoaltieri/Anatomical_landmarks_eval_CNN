@@ -1,42 +1,54 @@
 """
 AUTHORS: Altieri J. , Mazzini V.
 
-This program will train two models to perform cephalometric landmark detection.
-The first model is a U-Net to do a coarse detection of each landmark ROI;
-The second model is a ResNet50 which will perform the actual keypoint detection.
+This program will train a U-Net to do a coarse detection of cephalometric landmarks.
+It creates a "displacement tensor" which performs an elastic deformation of the "moving image"
+onto a fixed one. this also moves the landmarks and their corresponding RoI.
 
-A data augmentation process is also possible and present as a function, beware that this might be time-consuming.
+The net architecture is inspired by the one proposed in the following paper:
+https://www.jstage.jst.go.jp/article/transinf/E104.D/8/E104.D_2021EDP7001/_pdf
 """
 import os
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 import numpy as np
-import cv2
 import pickle
+import warnings
 
-# Filter out TFA warning
-#import warnings
-#warnings.filterwarnings("ignore", message="TFA has entered a minimal maintenance and release mode", category=Warning)
-
+warnings.filterwarnings("ignore")   # suppress tfa deprecated warnings
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # ignore TF unsupported NUMA warnings
 from keras import regularizers
 from keras.callbacks import ReduceLROnPlateau
 import tensorflow as tf
 import tensorflow_addons as tfa
+warnings.resetwarnings()    # restore warnings
 
 # Avoid OOM errors by setting GPU Memory Consumption Growth
 gpus = tf.config.experimental.list_physical_devices('GPU')
 for gpu in gpus: 
     tf.config.experimental.set_memory_growth(gpu, True)
-
+    
+physical_devices = tf.config.experimental.list_physical_devices('GPU')
+if len(physical_devices) > 0:
+    print("We got a GPU!")
+    tf.config.experimental.set_memory_growth(physical_devices[0], True)
+else:
+    print("Sorry, no GPU for you...")
 
 
 ######################################## HYPERPARAMETERS AND OTHER OPTIONS ########################################
+# Chose the fixed image-label pair you want to train on
+fixed_image_path = "fixed_img.jpg"
+fixed_label_path = "fixed_lab.txt"
+# fixed_image_path = "/mnt/c/Users/vitto/Desktop/DL project/DL project github/fixed_img.jpg"
+# fixed_label_path = "/mnt/c/Users/vitto/Desktop/DL project/DL project github/fixed_lab.txt"
+
 # Choose if the model should be trained
 TRAINING = False
 
-# Choose the name of the saved dataset
-MODEL_NAME = "unet_100epochs.keras"
-TRAINING_HISTORY = "training_history.pickle"
+# Choose the name of the model to save/load
+MODEL_NAME = "Anatomical_landmarks_eval_CNN/unet_100epochs_prova.keras"
+TRAINING_HISTORY = "Anatomical_landmarks_eval_CNN/training_history_prova.pickle"
 
 # Training hyperparameters
 BATCH_SIZE = 3
@@ -45,28 +57,23 @@ LRELU_ALPHA = 0.01 # alpha coefficient of LeakyReLU
 L2REG = 0.0001 # kernel regularizer coefficient
 
 # Adam hyperparameters
-LR=0.001
-BETA_1=0.9
+LR=0.0001
+BETA_1=0.95
 BETA_2=0.999
-EPSILON=1e-07
+EPSILON=1e-08
 
 # ReduceLROnPlateau hyperparameters
 RLR_FACTOR = 0.2
 RLR_PATIENCE = 5
-RLR_MIN = 0.001
-
-# Chose the fixed image-label pair you want to train on
-fixed_image_path = "/mnt/c/Users/jacop/Desktop/DL_Project/1124.jpg"
-fixed_label_path = "/mnt/c/Users/jacop/Desktop/DL_Project/1124.txt"
+RLR_MIN = 0.00001
 
 
 ######################################## Importing Dataset #######################################################
 print("Started dataset loading...")
 
-#input_path = "/mnt/c/Users/jacop/Desktop/DL_Project/processed_dataset/" #if in wsl
-input_path = "/mnt/c/Users/vitto/Desktop/DL project/DL project github/processed_dataset/" #if in wsl
-#input_path = "C:/Users/vitto/Desktop/DL project/DL project github/processed_dataset/"  # if in windows
-#input_path = "C:/Users/jacop/Desktop/DL_Project/processed_dataset/"  # if in windows
+input_path = "/mnt/c/Users/jacop/Desktop/DL_Project/processed_dataset/" 
+#input_path = "/mnt/c/Users/vitto/Desktop/DL project/DL project github/processed_dataset/" 
+
 
 # =========== Images =========== #
 
@@ -115,8 +122,8 @@ def load_labels(path):
         next(file, None)
         for line in file:
             columns = line.strip().split("\t")
-            x_value = float(columns[1]) / 256
-            y_value = float(columns[2]) / 256
+            x_value = float(columns[1])
+            y_value = float(columns[2])
             landmarks.extend([x_value, y_value])
     return np.array(landmarks)
 
@@ -141,8 +148,8 @@ fixed_dataset = tf.data.Dataset.zip((fixed_image,fixed_label))
 
 
 
-
 ######################################## U-NET #######################################################
+
 
 # =========== Generators =========== #
 print("Creating generators...")
@@ -235,6 +242,7 @@ test_images_dataset = test_images_dataset.batch(BATCH_SIZE)
 # a: activation, c: convolution,
 # p: pooling, u: upconvolution, bn: batch normalization
 
+
 input_shape = (256, 256, 2) # Two images, one fixed and one moving
 input = tf.keras.layers.Input(shape=input_shape)
 
@@ -243,10 +251,10 @@ input = tf.keras.layers.Input(shape=input_shape)
 # Applying Leaky ReLU activation function with an alpha coefficient
 a1 = tf.keras.layers.LeakyReLU(alpha=LRELU_ALPHA)(input)
 
-# Applying a 2D convolution layer with 64 filters of size 3x3
+# Applying a 2D convolution layer with 64 filters of size 3x3, regularization L2 weight decay
 c1 = tf.keras.layers.Conv2D(64, 3, padding="same", kernel_initializer="he_normal", kernel_regularizer=regularizers.l2(L2REG))(a1)
 
-# Applying batch normalization
+# Applying batch normalization to improve stability and convergence
 bn1 = tf.keras.layers.BatchNormalization()(c1)
 
 # Applying a Dropout layer with a dropout rate of 10%
@@ -338,7 +346,7 @@ def apply_deformation(inputs):
         tf.Tensor: The deformed image resulting from applying the displacement tensor to the input image.
     """
     image, displacement_tensor = inputs
-    deformed_image = tfa.image.dense_image_warp(image, displacement_tensor)
+    deformed_image = tfa.image.dense_image_warp(image, -displacement_tensor)
     return deformed_image
 
 def_image = tf.keras.layers.Lambda(apply_deformation)([moving_image, displacement_tensor])
@@ -361,7 +369,7 @@ unet.compile(optimizer=adam, loss='mse', metrics='mse')
 
 # =========== Model Training =========== #
 if TRAINING:
-    print("training the model...")
+    print("Training the model...")
     history = unet.fit(train_images_dataset, epochs=EPOCHS, validation_data=val_images_dataset, callbacks=[reduce_lr])
     
     # save the model
@@ -373,20 +381,23 @@ if TRAINING:
     with open(training_hist_name, 'wb') as file_pi:
         pickle.dump(history.history, file_pi)
         
+
 # Load a pretrained model
 unet = tf.keras.models.load_model(MODEL_NAME,safe_mode=False)
 # Load the training history 
 with open(TRAINING_HISTORY, "rb") as file_pi:
     history = pickle.load(file_pi)
     
-# Plot training & validation accuracy values
+# Plot training & validation metric values
 plt.plot(history['mse'])
 plt.plot(history['val_mse'])
-plt.title('MSE')
+plt.title('Mean Squared Error')
 plt.ylabel('MSE')
 plt.xlabel('Epoch')
 plt.legend(['Train', 'Validation'], loc='upper left')
 plt.savefig('mse.png')
+plt.close()
+print(f"Plot saved as {os.getcwd()}'/mse.png'")
 
 # Plot training & validation loss values
 plt.plot(history['loss'])
@@ -396,7 +407,11 @@ plt.ylabel('Loss')
 plt.xlabel('Epoch')
 plt.legend(['Train', 'Validation'], loc='upper left')
 plt.savefig('loss.png')
+plt.close()
+print(f"Plot saved as {os.getcwd()}'/loss.png'")
 
+
+######################################## RESULTS #######################################################
 
 # =========== Model Testing =========== #
 # Evaluate the model on the test dataset
@@ -404,56 +419,170 @@ print("Evaluate on test data")
 results = unet.evaluate(test_images_dataset)
 print("Test loss, Test accuracy:", results)
 
-# plotting a deformation example
 
+# =========== Plotting from U-Net =========== #
 test_image_list = list(test_images_only)
-test_image = test_image_list[3]
+test_image = test_image_list[0]
+
+# stack tensors to obtain the correct input for the U-net
 test_feed = tf.stack([fixed_image, test_image],-1)
 test_feed = tf.expand_dims(test_feed, axis=0)
 
-results = unet.predict(test_feed)
+example = unet.predict(test_feed)
+predicted_image = example[0, :, :, 0]  # Extract the 2D image from the batch
 
-predicted_image = results[0, :, :, 0]  # Extract the 2D image from the batch
+fig, axs = plt.subplots(2, 2, figsize=(15, 15))
+fig.suptitle("U-Net output") 
 
-fig, axs = plt.subplots(1, 4, figsize=(15, 15))  # Adjust the figsize as needed
+axs[0, 0].imshow(fixed_image, cmap='gray')
+axs[0, 0].set_title('Fixed Image')
 
-axs[0].imshow(fixed_image, cmap='gray')
-axs[0].set_title('fixed image')
+axs[0, 1].imshow(test_image, cmap='gray')
+axs[0, 1].set_title('Moving Image')
 
-axs[1].imshow(test_image, cmap = 'gray')
-axs[1].set_title('moving image')
+axs[1, 0].imshow(predicted_image, cmap='gray')
+axs[1, 0].set_title('Deformed Image')
 
-axs[2].imshow(predicted_image, cmap= 'gray')
-axs[2].set_title('deformed image')
+axs[1, 1].imshow(fixed_image, cmap='gray')
+axs[1, 1].imshow(predicted_image, alpha=0.6)
+axs[1, 1].set_title('Overlapping Image')
 
-axs[3].imshow(fixed_image,cmap='gray')
-axs[3].imshow(predicted_image, alpha = 0.6)
-axs[3].set_title('overlapping image')
-plt.show()
+# Remove axis labels and ticks
+for ax in axs.flat:
+    ax.label_outer()
 
-# obtaining the image directly via the unet
-test_image_list = list(test_images_only)
-test_image = test_image_list[30]
-test_feed = tf.stack([fixed_image, test_image],-1)
-test_feed = tf.expand_dims(test_feed, axis=0)
+# Adjust spacing between subplots
+plt.tight_layout()
+
+plt.savefig('unet_deformation_example.png')
+plt.close()
+print(f"Plot saved as {os.getcwd()}'/unet_deformation_example.png'")
 
 
-results = unet.predict(test_feed)
+# =========== Plotting via displacement tensor =========== #
+displacement_model = tf.keras.Model(inputs=unet.input, outputs=unet.get_layer('disp').output)
+displacement_model_output = displacement_model.predict(test_feed)
 
-predicted_image = results[0, :, :, 0]  # Extract the 2D image from the batch
+# expand the test_image to match displacement_model_output dimensions
+test_image_expanded = np.expand_dims(test_image, axis=0)
+test_image_expanded = np.expand_dims(test_image_expanded, axis=3)
 
-fig, axs = plt.subplots(1, 4, figsize=(15, 15))  # Adjust the figsize as needed
+deformed_image = tfa.image.dense_image_warp(test_image_expanded, -displacement_model_output)
 
-axs[0].imshow(fixed_image, cmap='gray')
-axs[0].set_title('fixed image')
+fig, axs = plt.subplots(2, 2, figsize=(10, 10))
+fig.suptitle("Warping via displacement tensor") 
+axs[0, 0].imshow(fixed_image, cmap='gray')
+axs[0, 0].set_title('Fixed Image')
 
-axs[1].imshow(test_image, cmap = 'gray')
-axs[1].set_title('moving image')
+axs[0, 1].imshow(test_image, cmap='gray')
+axs[0, 1].set_title('Moving Image')
 
-axs[2].imshow(predicted_image, cmap= 'gray')
-axs[2].set_title('deformed image')
+axs[1, 0].imshow(deformed_image[0], cmap='gray')
+axs[1, 0].set_title('Deformed Image')
 
-axs[3].imshow(fixed_image,cmap='gray')
-axs[3].imshow(predicted_image, alpha = 0.6)
-axs[3].set_title('overlapping image')
-plt.show()
+axs[1, 1].imshow(fixed_image, cmap='gray')
+axs[1, 1].imshow(deformed_image[0], alpha=0.4)
+axs[1, 1].set_title('Overlapping Image')
+
+# Remove axis labels and ticks
+for ax in axs.flat:
+    ax.label_outer()
+
+# Adjust spacing between subplots
+plt.tight_layout()
+plt.savefig('tensor_deformation_example.png')
+plt.close()
+print(f"Plot saved as {os.getcwd()}'/tensor_deformation_example.png'")
+
+
+# =========== Plotting inverse transformation =========== #
+
+inverse_transform = -displacement_model_output
+# expand the fixed_image to match displacement_model_output dimensions
+fixed_image_expanded = np.expand_dims(fixed_image, axis=0)
+fixed_image_expanded = np.expand_dims(fixed_image_expanded, axis=3)
+
+deformed_image = tfa.image.dense_image_warp(fixed_image_expanded, -inverse_transform)
+
+fig, axs = plt.subplots(2, 2, figsize=(10, 10))
+fig.suptitle("Inverse displacement tensor") 
+axs[0, 0].imshow(fixed_image, cmap='gray')
+axs[0, 0].set_title('Fixed Image')
+
+axs[0, 1].imshow(test_image, cmap='gray')
+axs[0, 1].set_title('Moving Image')
+
+axs[1, 0].imshow(deformed_image[0], cmap='gray')
+axs[1, 0].set_title('Deformed Image')
+
+axs[1, 1].imshow(test_image, cmap='gray')
+axs[1, 1].imshow(deformed_image[0], alpha=0.4)
+axs[1, 1].set_title('Overlapping Image')
+
+# Remove axis labels and ticks
+for ax in axs.flat:
+    ax.label_outer()
+
+# Adjust spacing between subplots
+plt.tight_layout()
+plt.savefig('inverse_deformation_example.png')
+plt.close()
+print(f"Plot saved as {os.getcwd()}'/inverse_deformation_example.png'")
+
+
+# =========== Adding Landmarks and ROI =========== #
+fixed_labels = fixed_dataset.as_numpy_iterator().next()[1][0]
+
+def plot_with_landmarks_and_ROI(image, landmarks):
+    # Create a figure and axis for plotting
+    fig, ax = plt.subplots()
+    ax.imshow(image, cmap='gray')
+
+    for i in range(0, len(landmarks), 2):
+        x, y = landmarks[i], landmarks[i + 1]
+        ax.plot(x, y, 'ro', markersize=1)  # 'ro' means red dots
+
+        # Create a bounding box around the landmark
+        bounding_box = Rectangle((x - 5, y - 5), 10, 10, linewidth=1, edgecolor='r', facecolor='none')
+        ax.add_patch(bounding_box)
+
+    # Set axis limits to ensure landmarks and bounding boxes are visible
+    ax.set_xlim(0, image.shape[1])
+    ax.set_ylim(image.shape[0], 0)
+
+
+    
+plot_with_landmarks_and_ROI(fixed_image, fixed_labels)
+plt.savefig('true_landmarks.png')
+
+def deform_landmarks(landmarks, displacement_tensor):
+    """
+    Deform landmarks based on a displacement tensor.
+
+    Args:
+        landmarks (np.ndarray): An array of shape (N, 2) containing landmark coordinates.
+        displacement_tensor (np.ndarray): The displacement tensor with shape (1, H, W, 2).
+
+    Returns:
+        np.ndarray: Deformed landmarks based on the displacement tensor.
+    """
+    deformed_landmarks = []
+
+    for i in range(0, len(landmarks), 2):
+        x, y = landmarks[i], landmarks[i + 1]
+
+        # Get the displacement values from the displacement tensor
+        disp_x = displacement_tensor[0, int(x), int(y), 0]
+        disp_y = displacement_tensor[0, int(x), int(y), 1]
+
+        # Apply displacement to the landmarks
+        new_x = x + disp_x
+        new_y = y + disp_y
+
+        deformed_landmarks.extend([new_x, new_y])
+    return np.array(deformed_landmarks)
+
+deformed_landmarks= deform_landmarks(fixed_labels, inverse_transform)
+
+plot_with_landmarks_and_ROI(test_image, deformed_landmarks)
+plt.savefig('deformed_landmarks.png')
