@@ -15,20 +15,21 @@ import numpy as np
 import pickle
 import warnings
 
-warnings.filterwarnings("ignore")   # suppress tfa deprecated warnings
+warnings.filterwarnings("ignore")  # suppress tfa deprecated warnings
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # ignore TF unsupported NUMA warnings
 from keras import regularizers
 from keras.callbacks import ReduceLROnPlateau
 import tensorflow as tf
 import tensorflow_addons as tfa
-warnings.resetwarnings()    # restore warnings
+
+warnings.resetwarnings()  # restore warnings
 
 # Avoid OOM errors by setting GPU Memory Consumption Growth
-gpus = tf.config.experimental.list_physical_devices('GPU')
-for gpu in gpus: 
+gpus = tf.config.experimental.list_physical_devices("GPU")
+for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
-    
-physical_devices = tf.config.experimental.list_physical_devices('GPU')
+
+physical_devices = tf.config.experimental.list_physical_devices("GPU")
 if len(physical_devices) > 0:
     print("We got a GPU!")
     tf.config.experimental.set_memory_growth(physical_devices[0], True)
@@ -40,8 +41,6 @@ else:
 # Chose the fixed image-label pair you want to train on
 fixed_image_path = "fixed_img.jpg"
 fixed_label_path = "fixed_lab.txt"
-# fixed_image_path = "/mnt/c/Users/vitto/Desktop/DL project/DL project github/fixed_img.jpg"
-# fixed_label_path = "/mnt/c/Users/vitto/Desktop/DL project/DL project github/fixed_lab.txt"
 
 # Choose if the model should be trained
 TRAINING = False
@@ -53,14 +52,14 @@ TRAINING_HISTORY = "unet_pretrained_history.pickle"
 # Training hyperparameters
 BATCH_SIZE = 3
 EPOCHS = 100
-LRELU_ALPHA = 0.01 # alpha coefficient of LeakyReLU
-L2REG = 0.0001 # kernel regularizer coefficient
+LRELU_ALPHA = 0.01  # alpha coefficient of LeakyReLU
+L2REG = 0.0001  # kernel regularizer coefficient
 
 # Adam hyperparameters
-LR=0.0001
-BETA_1=0.95
-BETA_2=0.999
-EPSILON=1e-08
+LR = 0.0001
+BETA_1 = 0.95
+BETA_2 = 0.999
+EPSILON = 1e-08
 
 # ReduceLROnPlateau hyperparameters
 RLR_FACTOR = 0.2
@@ -71,14 +70,14 @@ RLR_MIN = 0.00001
 ######################################## Importing Dataset #######################################################
 print("Started dataset loading...")
 
-input_path = "/mnt/c/Users/jacop/Desktop/DL_Project/processed_dataset/" 
-#input_path = "/mnt/c/Users/vitto/Desktop/DL project/DL project github/processed_dataset/" 
+input_path = "/mnt/c/Users/jacop/Desktop/DL_Project/processed_dataset/"
+# input_path = "/mnt/c/Users/vitto/Desktop/DL project/DL project github/processed_dataset/"
 
 
 # =========== Images =========== #
 
 def process_image(x):
-    """    Reads the file as a sequence of bytes and converts it
+    """Reads the file as a sequence of bytes and converts it
     into a grayscale JPG image normalized in [0,1]
 
     Args:
@@ -144,8 +143,7 @@ train_dataset = tf.data.Dataset.zip((train_images, train_labels)).shuffle(1000)
 test_dataset = tf.data.Dataset.zip((test_images, test_labels)).shuffle(1000)
 val_dataset = tf.data.Dataset.zip((val_images, val_labels)).shuffle(1000)
 
-fixed_dataset = tf.data.Dataset.zip((fixed_image,fixed_label))
-
+fixed_dataset = tf.data.Dataset.zip((fixed_image, fixed_label))
 
 
 ######################################## U-NET #######################################################
@@ -153,7 +151,7 @@ fixed_dataset = tf.data.Dataset.zip((fixed_image,fixed_label))
 
 # =========== Generators =========== #
 print("Creating generators...")
-  
+
 # Extract only the images
 train_images_only = train_dataset.map(lambda img, lbl: img)
 test_images_only = test_dataset.map(lambda img, lbl: img)
@@ -178,16 +176,18 @@ def train_image_generator():
     """
     for moving_image in train_list:
         # Combine fixed and moving images into a single tensor
-        combined_image = tf.stack([fixed_image,moving_image],-1)
+        combined_image = tf.stack([fixed_image, moving_image], -1)
         yield (combined_image, fixed_image)
 
 
 # Create a TensorFlow dataset from the generator
 train_images_dataset = tf.data.Dataset.from_generator(
     train_image_generator,
-    output_signature=(tf.TensorSpec(shape=(256, 256, 2), dtype=tf.float32),
-                      tf.TensorSpec(shape=(256, 256), dtype=tf.float32))
-    )
+    output_signature=(
+        tf.TensorSpec(shape=(256, 256, 2), dtype=tf.float32),
+        tf.TensorSpec(shape=(256, 256), dtype=tf.float32),
+    ),
+)
 train_images_dataset = train_images_dataset.batch(BATCH_SIZE)
 
 
@@ -209,8 +209,8 @@ val_images_dataset = tf.data.Dataset.from_generator(
     val_image_generator,
     output_signature=(
         tf.TensorSpec(shape=(256, 256, 2), dtype=tf.float32),
-        tf.TensorSpec(shape=(256, 256), dtype=tf.float32)
-    )
+        tf.TensorSpec(shape=(256, 256), dtype=tf.float32),
+    ),
 )
 val_images_dataset = val_images_dataset.batch(BATCH_SIZE)
 
@@ -232,8 +232,8 @@ test_images_dataset = tf.data.Dataset.from_generator(
     test_image_generator,
     output_signature=(
         tf.TensorSpec(shape=(256, 256, 2), dtype=tf.float32),
-        tf.TensorSpec(shape=(256, 256), dtype=tf.float32)
-    )
+        tf.TensorSpec(shape=(256, 256), dtype=tf.float32),
+    ),
 )
 test_images_dataset = test_images_dataset.batch(BATCH_SIZE)
 
@@ -243,24 +243,24 @@ test_images_dataset = test_images_dataset.batch(BATCH_SIZE)
 # p: pooling, u: upconvolution, bn: batch normalization
 
 
-input_shape = (256, 256, 2) # Two images, one fixed and one moving
+input_shape = (256, 256, 2)  # Two images, one fixed and one moving
 input = tf.keras.layers.Input(shape=input_shape)
 
 ### Downsampling path ###
 
-# Applying Leaky ReLU activation function with an alpha coefficient
+# Leaky ReLU activation function with an alpha coefficient
 a1 = tf.keras.layers.LeakyReLU(alpha=LRELU_ALPHA)(input)
 
 # Applying a 2D convolution layer with 64 filters of size 3x3, regularization L2 weight decay
 c1 = tf.keras.layers.Conv2D(64, 3, padding="same", kernel_initializer="he_normal", kernel_regularizer=regularizers.l2(L2REG))(a1)
 
-# Applying batch normalization to improve stability and convergence
+# Batch normalization to improve stability and convergence
 bn1 = tf.keras.layers.BatchNormalization()(c1)
 
-# Applying a Dropout layer with a dropout rate of 10%
+# Dropout layer with a dropout rate of 10%
 c1 = tf.keras.layers.Dropout(0.1)(c1)
 
-# Applying max-pooling with a pooling window of size 2x2
+# Max-pooling with a pooling window of size 2x2
 p1 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(c1)
 
 a2 = tf.keras.layers.LeakyReLU(alpha=LRELU_ALPHA)(p1)
@@ -317,7 +317,7 @@ c10 = tf.keras.layers.Conv2D(2, 1, padding="same", kernel_initializer="he_normal
 
 # Create the displacement tensor
 displacement_tensor = tf.keras.layers.Conv2D(
-    2, kernel_size=3, activation='linear', padding="same", name="disp"
+    2, kernel_size=3, activation="linear", padding="same", name="disp"
 )(c10)
 
 
@@ -341,7 +341,7 @@ def apply_deformation(inputs):
 
     Args:
         inputs (list): A list containing two TensorFlow tensors, 'image' and 'displacement_tensor'.
-        
+
     Returns:
         tf.Tensor: The deformed image resulting from applying the displacement tensor to the input image.
     """
@@ -350,7 +350,6 @@ def apply_deformation(inputs):
     return deformed_image
 
 def_image = tf.keras.layers.Lambda(apply_deformation)([moving_image, displacement_tensor])
-
 output = def_image
 
 
@@ -358,55 +357,65 @@ output = def_image
 unet = tf.keras.Model(inputs=input, outputs=output)
 
 # Define the callback to reduce the learning rate when the validation loss stops improving
-reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=RLR_FACTOR,
-                              patience=RLR_PATIENCE, min_lr=RLR_MIN, amsgrad=False)
+reduce_lr = ReduceLROnPlateau(
+    monitor="val_loss",
+    factor=RLR_FACTOR,
+    patience=RLR_PATIENCE,
+    min_lr=RLR_MIN,
+    amsgrad=False,
+)
 
 
 adam = tf.keras.optimizers.Adam(learning_rate=LR, beta_1=BETA_1, beta_2=BETA_2, epsilon=EPSILON)
 
-unet.compile(optimizer=adam, loss='mse', metrics='mse')
+unet.compile(optimizer=adam, loss="mse", metrics="mse")
 
 
 # =========== Model Training =========== #
 if TRAINING:
     print("Training the model...")
-    history = unet.fit(train_images_dataset, epochs=EPOCHS, validation_data=val_images_dataset, callbacks=[reduce_lr])
-    
-    # save the model
+    history = unet.fit(
+        train_images_dataset,
+        epochs=EPOCHS,
+        validation_data=val_images_dataset,
+        callbacks=[reduce_lr],
+    )
+
+    # Save the model
     model_name = MODEL_NAME
     training_hist_name = TRAINING_HISTORY
     unet.save(model_name)
-    print('Model saved as', model_name)
+    print("Model saved as", model_name)
     # Save the history via pickle
-    with open(training_hist_name, 'wb') as file_pi:
+    with open(training_hist_name, "wb") as file_pi:
         pickle.dump(history.history, file_pi)
-        
+
 
 # Load a pretrained model
-unet = tf.keras.models.load_model(MODEL_NAME,safe_mode=False)
-# Load the training history 
+unet = tf.keras.models.load_model(MODEL_NAME, safe_mode=False)
+# Load the training history
 with open(TRAINING_HISTORY, "rb") as file_pi:
     history = pickle.load(file_pi)
-    
+
 # Plot training & validation metric values
-plt.plot(history['mse'])
-plt.plot(history['val_mse'])
-plt.title('Mean Squared Error')
-plt.ylabel('MSE')
-plt.xlabel('Epoch')
-plt.legend(['Train', 'Validation'], loc='upper left')
-plt.savefig('mse.png')
+plt.plot(history["mse"])
+plt.plot(history["val_mse"])
+plt.title("Mean Squared Error")
+plt.ylabel("MSE")
+plt.xlabel("Epoch")
+plt.legend(["Train", "Validation"], loc="upper left")
+plt.savefig("mse.png")
 plt.close()
 print(f"Plot saved as {os.getcwd()}'/mse.png'")
 
 # Plot training & validation loss values
-plt.plot(history['loss'])
-plt.plot(history['val_loss'])
-plt.title('Model Loss')
-plt.ylabel('Loss')
-plt.xlabel('Epoch')
-plt.legend(['Train', 'Validation'], loc='upper left')
-plt.savefig('loss.png')
+plt.plot(history["loss"])
+plt.plot(history["val_loss"])
+plt.title("Model Loss")
+plt.ylabel("Loss")
+plt.xlabel("Epoch")
+plt.legend(["Train", "Validation"], loc="upper left")
+plt.savefig("loss.png")
 plt.close()
 print(f"Plot saved as {os.getcwd()}'/loss.png'")
 
@@ -425,27 +434,27 @@ test_image_list = list(test_images_only)
 test_image = test_image_list[0]
 
 # stack tensors to obtain the correct input for the U-net
-test_feed = tf.stack([fixed_image, test_image],-1)
+test_feed = tf.stack([fixed_image, test_image], -1)
 test_feed = tf.expand_dims(test_feed, axis=0)
 
 example = unet.predict(test_feed)
 predicted_image = example[0, :, :, 0]  # Extract the 2D image from the batch
 
 fig, axs = plt.subplots(2, 2, figsize=(15, 15))
-fig.suptitle("U-Net output") 
+fig.suptitle("U-Net output")
 
-axs[0, 0].imshow(fixed_image, cmap='gray')
-axs[0, 0].set_title('Fixed Image')
+axs[0, 0].imshow(fixed_image, cmap="gray")
+axs[0, 0].set_title("Fixed Image")
 
-axs[0, 1].imshow(test_image, cmap='gray')
-axs[0, 1].set_title('Moving Image')
+axs[0, 1].imshow(test_image, cmap="gray")
+axs[0, 1].set_title("Moving Image")
 
-axs[1, 0].imshow(predicted_image, cmap='gray')
-axs[1, 0].set_title('Deformed Image')
+axs[1, 0].imshow(predicted_image, cmap="gray")
+axs[1, 0].set_title("Deformed Image")
 
-axs[1, 1].imshow(fixed_image, cmap='gray')
+axs[1, 1].imshow(fixed_image, cmap="gray")
 axs[1, 1].imshow(predicted_image, alpha=0.6)
-axs[1, 1].set_title('Overlapping Image')
+axs[1, 1].set_title("Overlapping Image")
 
 # Remove axis labels and ticks
 for ax in axs.flat:
@@ -454,13 +463,15 @@ for ax in axs.flat:
 # Adjust spacing between subplots
 plt.tight_layout()
 
-plt.savefig('unet_deformation_example.png')
+plt.savefig("unet_deformation_example.png")
 plt.close()
 print(f"Plot saved as {os.getcwd()}'/unet_deformation_example.png'")
 
 
 # =========== Plotting via displacement tensor =========== #
-displacement_model = tf.keras.Model(inputs=unet.input, outputs=unet.get_layer('disp').output)
+displacement_model = tf.keras.Model(
+    inputs=unet.input, outputs=unet.get_layer("disp").output
+)
 displacement_model_output = displacement_model.predict(test_feed)
 
 # expand the test_image to match displacement_model_output dimensions
@@ -469,20 +480,20 @@ test_image_expanded = np.expand_dims(test_image_expanded, axis=3)
 
 deformed_image = tfa.image.dense_image_warp(test_image_expanded, -displacement_model_output)
 
-fig, axs = plt.subplots(2, 2, figsize=(10, 10))
-fig.suptitle("Warping via displacement tensor") 
-axs[0, 0].imshow(fixed_image, cmap='gray')
-axs[0, 0].set_title('Fixed Image')
+fig, axs = plt.subplots(2, 2, figsize=(15, 15))
+fig.suptitle("Warping via displacement tensor")
+axs[0, 0].imshow(fixed_image, cmap="gray")
+axs[0, 0].set_title("Fixed Image")
 
-axs[0, 1].imshow(test_image, cmap='gray')
-axs[0, 1].set_title('Moving Image')
+axs[0, 1].imshow(test_image, cmap="gray")
+axs[0, 1].set_title("Moving Image")
 
-axs[1, 0].imshow(deformed_image[0], cmap='gray')
-axs[1, 0].set_title('Deformed Image')
+axs[1, 0].imshow(deformed_image[0], cmap="gray")
+axs[1, 0].set_title("Deformed Image")
 
-axs[1, 1].imshow(fixed_image, cmap='gray')
+axs[1, 1].imshow(fixed_image, cmap="gray")
 axs[1, 1].imshow(deformed_image[0], alpha=0.4)
-axs[1, 1].set_title('Overlapping Image')
+axs[1, 1].set_title("Overlapping Image")
 
 # Remove axis labels and ticks
 for ax in axs.flat:
@@ -490,7 +501,7 @@ for ax in axs.flat:
 
 # Adjust spacing between subplots
 plt.tight_layout()
-plt.savefig('tensor_deformation_example.png')
+plt.savefig("tensor_deformation_example.png")
 plt.close()
 print(f"Plot saved as {os.getcwd()}'/tensor_deformation_example.png'")
 
@@ -504,20 +515,20 @@ fixed_image_expanded = np.expand_dims(fixed_image_expanded, axis=3)
 
 deformed_image = tfa.image.dense_image_warp(fixed_image_expanded, -inverse_transform)
 
-fig, axs = plt.subplots(2, 2, figsize=(10, 10))
-fig.suptitle("Inverse displacement tensor") 
-axs[0, 0].imshow(fixed_image, cmap='gray')
-axs[0, 0].set_title('Fixed Image')
+fig, axs = plt.subplots(2, 2, figsize=(15, 15))
+fig.suptitle("Inverse displacement tensor")
+axs[0, 0].imshow(fixed_image, cmap="gray")
+axs[0, 0].set_title("Fixed Image")
 
-axs[0, 1].imshow(test_image, cmap='gray')
-axs[0, 1].set_title('Moving Image')
+axs[0, 1].imshow(test_image, cmap="gray")
+axs[0, 1].set_title("Moving Image")
 
-axs[1, 0].imshow(deformed_image[0], cmap='gray')
-axs[1, 0].set_title('Deformed Image')
+axs[1, 0].imshow(deformed_image[0], cmap="gray")
+axs[1, 0].set_title("Deformed Image")
 
-axs[1, 1].imshow(test_image, cmap='gray')
+axs[1, 1].imshow(test_image, cmap="gray")
 axs[1, 1].imshow(deformed_image[0], alpha=0.4)
-axs[1, 1].set_title('Overlapping Image')
+axs[1, 1].set_title("Overlapping Image")
 
 # Remove axis labels and ticks
 for ax in axs.flat:
@@ -525,7 +536,7 @@ for ax in axs.flat:
 
 # Adjust spacing between subplots
 plt.tight_layout()
-plt.savefig('inverse_deformation_example.png')
+plt.savefig("inverse_deformation_example.png")
 plt.close()
 print(f"Plot saved as {os.getcwd()}'/inverse_deformation_example.png'")
 
@@ -533,14 +544,15 @@ print(f"Plot saved as {os.getcwd()}'/inverse_deformation_example.png'")
 # =========== Adding Landmarks and ROI =========== #
 fixed_labels = fixed_dataset.as_numpy_iterator().next()[1][0]
 
-def plot_with_landmarks_and_ROI(image, landmarks):
+
+def plot_with_landmarks_and_ROI(image, landmarks, bbox_size=15):
     # Create a figure and axis for plotting
     fig, ax = plt.subplots()
-    ax.imshow(image, cmap='gray')
+    ax.imshow(image, cmap="gray")
 
     for i in range(0, len(landmarks), 2):
         x, y = landmarks[i], landmarks[i + 1]
-        ax.plot(x, y, 'ro', markersize=1)  # 'ro' means red dots
+        ax.plot(x, y, "ro", markersize=1)  # 'ro' means red dots
 
         # Create a bounding box around the landmark
         bounding_box = Rectangle((x - 5, y - 5), 10, 10, linewidth=1, edgecolor='r', facecolor='none')
@@ -551,9 +563,9 @@ def plot_with_landmarks_and_ROI(image, landmarks):
     ax.set_ylim(image.shape[0], 0)
 
 
-    
 plot_with_landmarks_and_ROI(fixed_image, fixed_labels)
-plt.savefig('true_landmarks.png')
+plt.savefig("true_landmarks.png")
+
 
 def deform_landmarks(landmarks, displacement_tensor):
     """
@@ -582,7 +594,8 @@ def deform_landmarks(landmarks, displacement_tensor):
         deformed_landmarks.extend([new_x, new_y])
     return np.array(deformed_landmarks)
 
-deformed_landmarks= deform_landmarks(fixed_labels, inverse_transform)
+
+deformed_landmarks = deform_landmarks(fixed_labels, inverse_transform)
 
 plot_with_landmarks_and_ROI(test_image, deformed_landmarks)
-plt.savefig('deformed_landmarks.png')
+plt.savefig("deformed_landmarks.png")
