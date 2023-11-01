@@ -28,7 +28,7 @@ The 14 landmarks to be found by this network are listed below, ordered according
 ## Repository organization
 * **preprocessing_scripts**: contains the preprocessor script: use it if you are willing to work with the original dataset. It will find all the matching image-label pairs and sort them into three categories (train, test, val).
 * **NN**: contains the Network, the pre-trained model and its training history. It also contains the image-label pair chosen as the fixed image during training.
-* **Outputs**: contains the Loss and Metric plots of the pre-trained model, along with some output examples.
+* **Results**: contains the Loss and Metric plots of the pre-trained model, along with some output examples.
   
 ## Dataset structure
 The main directory needs two subfolders called "images" and "labels" respectively. Each image in the dataset has a corresponding text file with the same name as the image file and the ".txt" extension.
@@ -61,7 +61,7 @@ An example of the correct formatting for images and labels can be found as the "
 ### Network
 This neural network uses a U-Net architecture to perform deformable image registration, which involves aligning two images by deforming one of them to match the other. The network takes in two images - a fixed image and a moving image - and outputs a deformed version of the moving image that aligns with the fixed image. In the last part it will deform the landmark position based on the fixed image with the displacement tensor, and apply it to the moving image.
 
-Download the script *NN/main.py*. In the first section, set the paths to the processed dataset, the image-label pair chosen as the fixed one (you can use the one provided in the same folder); then choose if the network should be trained or should work on a pre-trained model, and set the hyperparameters. If you choose to train, it will save plots about the model loss and the model MSE. 
+Download the folder *NN* and run the script *main.py*. In the first section of it, set the paths to the processed dataset, the image-label pair chosen as the fixed one (you can use the one provided in the same folder); then choose if the network should be trained or should work on a pre-trained model, and set the hyperparameters. If you choose to train, it will save plots about the model loss and the model MSE. 
 
 The net will then evaluate the model on the test dataset, and apply the displacement tensor to find the coarse landmark position. The plots will be saved in the working directory.
 
