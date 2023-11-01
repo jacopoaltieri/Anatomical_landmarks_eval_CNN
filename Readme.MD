@@ -1,7 +1,7 @@
 # Identification of anatomical landmarks using CNN
 
 ## Introduction
-The task of this project is to develop a CNN to do a coarse detection of 14 anatomical landmarks from lateral cephalometric radiographs.
+The task of this project is to develop a CNN to perform a coarse detection of 14 anatomical landmarks from lateral cephalometric radiographs.
 
 ## Cephalometry principles
 To carry out cephalometry, the X-ray tube is placed at 1.5 meters away from the mid sagittal plane, while the detector is at 15 cm on the other side.
@@ -34,7 +34,7 @@ The 14 landmarks to be found by this network are listed below, ordered according
 The main directory needs two subfolders called "images" and "labels" respectively. Each image in the dataset has a corresponding text file with the same name as the image file and the ".txt" extension.
 
 ## Usage
-The script runs in python 3.10.12, please use this version to assure compatibility, especially if you wish to use the pre-trained model.
+The script runs in python 3.10.12, please use this version to ensure compatibility, especially if you wish to use the pre-trained model.
 #### Requirements
 - keras==2.14.0
 - matplotlib==3.8.0
@@ -59,7 +59,7 @@ The images should be 256x256 px in RGB, and the labels should be a tab-separated
 An example of the correct formatting for images and labels can be found as the "fixed image/label" in the *NN* directory of this repository.
 
 ### Network
-This neural network uses a U-Net architecture to perform deformable image registration, which involves aligning two images by deforming one of them to match the other. The network takes in two images - a fixed image and a moving image - and outputs a deformed version of the moving image that aligns with the fixed image. In the last part it will deform the landmark position based on the fixed image with the displacement tensor, and apply it to the moving image.
+This neural network uses a U-Net architecture to perform deformable image registration, which involves aligning two images by deforming one of them to match the other. The network takes in two images - a fixed image and a moving image - and outputs a deformed version of the moving image that aligns with the fixed image. In the last part it will deform the landmark position based on the fixed image with the displacement tensor, and plot them onto the moving image.
 
 Download the folder *NN* and run the script *main.py*. In the first section of it, set the paths to the processed dataset, the image-label pair chosen as the fixed one (you can use the one provided in the same folder); then choose if the network should be trained or should work on a pre-trained model, and set the hyperparameters. If you choose to train, it will save plots about the model loss and the model MSE. 
 
