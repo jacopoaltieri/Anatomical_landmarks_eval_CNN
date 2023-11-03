@@ -135,3 +135,6 @@ ui-tests/playwright-report
 .pnp.*
 ui-tests/.yarn/*
 ui-tests/.pnp.*
+
+# pre-trained models (too large for github)
+**.keras
