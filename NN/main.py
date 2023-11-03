@@ -437,9 +437,14 @@ print("Evaluating on test dataset...")
 results = unet.evaluate(test_images_dataset)
 print("Test loss, Test accuracy:", results)
 
+
+# =========== Extracting an example to plot =========== #
+example = test_dataset.as_numpy_iterator().next()
+test_image = example[0]
+test_labels = example[1][0]
+
+
 # =========== Plotting from U-Net =========== #
-test_image_list = list(test_images_only)
-test_image = test_image_list[0]
 
 # Stack tensors to obtain the correct input for the U-net
 test_feed = tf.stack([fixed_image, test_image], -1)
@@ -572,6 +577,8 @@ def plot_with_landmarks_and_ROI(image, landmarks):
     
 plot_with_landmarks_and_ROI(fixed_image, fixed_labels)
 plt.savefig('true_landmarks.png')
+print(f"Plot saved as {os.getcwd()}'/true_landmarks.png'")
+
 plt.close()
 
 def deform_landmarks(landmarks, displacement_tensor):
@@ -606,4 +613,5 @@ deformed_landmarks = deform_landmarks(fixed_labels, inverse_transform)
 
 plot_with_landmarks_and_ROI(test_image, deformed_landmarks)
 plt.savefig('deformed_landmarks.png')
+print(f"Plot saved as {os.getcwd()}'/deformed_landmarks.png'")
 plt.close()
