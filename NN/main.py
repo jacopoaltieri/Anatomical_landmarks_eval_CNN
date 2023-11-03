@@ -557,7 +557,7 @@ print(f"Plot saved as {os.getcwd()}'/inverse_deformation_example.png'")
 fixed_labels = fixed_dataset.as_numpy_iterator().next()[1][0]
 
 
-def plot_with_landmarks_and_ROI(image, landmarks):
+def plot_with_landmarks_and_ROI(image, landmarks, bbox_size = 20):
     # Create a figure and axis for plotting
     fig, ax = plt.subplots()
     ax.imshow(image, cmap="gray")
@@ -567,7 +567,7 @@ def plot_with_landmarks_and_ROI(image, landmarks):
         ax.plot(x, y, 'ro', markersize=1) 
 
         # Create a bounding box around the landmark
-        bounding_box = Rectangle((x - 5, y - 5), 10, 10, linewidth=1, edgecolor='r', facecolor='none')
+        bounding_box = Rectangle((x - bbox_size/2, y - bbox_size/2), bbox_size, bbox_size, linewidth=1, edgecolor='r', facecolor='none')
         ax.add_patch(bounding_box)
 
     # Set axis limits to ensure landmarks and bounding boxes are visible
