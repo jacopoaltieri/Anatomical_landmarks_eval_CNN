@@ -44,7 +44,7 @@ for gpu in physical_devices:
 ######################################## HYPERPARAMETERS AND OTHER OPTIONS ########################################
 
 # Dataset path
-input_path = "Anatomical_landmarks_eval_CNN/processed_dataset"
+input_path = "/mnt/c/Users/jacop/Desktop/processed_dataset"
 if not os.path.exists(input_path):
     input_path = input("Cannot find the dataset path provided in the script.\n"
                        "Please input a valid path: ")
@@ -54,11 +54,11 @@ fixed_image_path = "fixed_img.jpg"
 fixed_label_path = "fixed_lab.txt"
 
 # Choose if the model should be trained
-TRAINING = False
+TRAINING = True
 
 # Choose the name of the model to save/load
-MODEL_NAME = "unet_pretrained.keras"
-TRAINING_HISTORY = "unet_pretrained_history.pickle"
+MODEL_NAME = "pen07.keras"
+TRAINING_HISTORY = "pen07_history.pickle"
 
 # Training hyperparameters
 BATCH_SIZE = 3
@@ -150,11 +150,6 @@ def load_labels(path):
 
 
 # For augmentation
-def apply_noise(image, max_noise_stddev=0.1):
-    noise = tf.random.normal(shape=tf.shape(image), mean=0.0, stddev=max_noise_stddev)
-    image = tf.clip_by_value(image + noise, 0.0, 1.0)
-    return image
-
 def apply_brightness(image, max_delta=0.2):
     delta = tf.random.uniform((), minval=-max_delta, maxval=max_delta)
     image = tf.image.adjust_brightness(image, delta)
@@ -182,7 +177,6 @@ def augment_image(x):
     img = tf.image.rgb_to_grayscale(img)
     img = img / 255
 
-    img = apply_noise(img)
     img = apply_brightness(img)
     img = apply_contrast(img)
     
@@ -509,7 +503,7 @@ with open(TRAINING_HISTORY, "rb") as file_pi:
 
 # Plot training & validation metric values
 plt.plot(history["mse"])
-plt.plot(history["validation_mse"])
+plt.plot(history["val_mse"])
 plt.title("Mean Squared Error")
 plt.ylabel("MSE")
 plt.xlabel("Epoch")
@@ -520,7 +514,7 @@ print(f"Plot saved as {os.getcwd()}'/mse.png'")
 
 # Plot training & validation loss values
 plt.plot(history["loss"])
-plt.plot(history["validation_loss"])
+plt.plot(history["val_loss"])
 plt.title("Model Loss")
 plt.ylabel("Loss")
 plt.xlabel("Epoch")
