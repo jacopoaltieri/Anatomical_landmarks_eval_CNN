@@ -20,7 +20,7 @@ warnings.filterwarnings("ignore")  # suppress tfa deprecated warnings
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # ignore TF unsupported NUMA warnings
 
 from keras import regularizers
-from keras.callbacks import ReduceLROnPlateau
+from keras.callbacks import ReduceLROnPlateau, EarlyStopping
 
 import tensorflow as tf
 import tensorflow_addons as tfa
@@ -47,13 +47,15 @@ else:
 # Chose the fixed image-label pair you want to train on
 fixed_image_path = "fixed_img.jpg"
 fixed_label_path = "fixed_lab.txt"
+# fixed_image_path = "/mnt/c/Users/jacop/Desktop/processed_dataset/images/train/039.jpg"
+# fixed_label_path = "/mnt/c/Users/jacop/Desktop/processed_dataset/labels/train/039.txt"
 
 # Choose if the model should be trained
-TRAINING = False
+TRAINING = True
 
 # Choose the name of the model to save/load
-MODEL_NAME = "prova.keras"
-TRAINING_HISTORY = "prova_history.pickle"
+MODEL_NAME = "pen07.keras"
+TRAINING_HISTORY = "pen07_history.pickle"
 
 # Training hyperparameters
 BATCH_SIZE = 3
@@ -72,16 +74,37 @@ RLR_FACTOR = 0.2
 RLR_PATIENCE = 5
 RLR_MIN = 0.00001
 
-LAPL_COEF = 0.1
+LAPL_COEF = 0.7
 ######################################## Importing Dataset #######################################################
 print("Started dataset loading...")
 
-input_path = "/mnt/c/Users/jacop/Desktop/DL_Project/processed_dataset/"
+#input_path = "/mnt/c/Users/jacop/Desktop/DL_Project/processed_dataset/"
 #input_path = "/mnt/c/Users/jacop/Desktop/processed_dataset"
+input_path = "/mnt/c/Users/jacop/Desktop/processed_dataset1"
 
 
 # =========== Images =========== #
 
+
+# Function to apply random noise to an image
+def apply_noise(image, max_noise_stddev=0.1):
+    noise = tf.random.normal(shape=tf.shape(image), mean=0.0, stddev=max_noise_stddev)
+    image = tf.clip_by_value(image + noise, 0.0, 1.0)  # Ensure values are in [0, 1]
+    return image
+
+# Function to apply random brightness adjustment to an image
+def apply_brightness(image, max_delta=0.2):
+    delta = tf.random.uniform((), minval=-max_delta, maxval=max_delta)
+    image = tf.image.adjust_brightness(image, delta)
+    image = tf.clip_by_value(image, 0.0, 1.0)  # Ensure values are in [0, 1]
+    return image
+
+# Function to apply random contrast adjustment to an image
+def apply_contrast(image, max_contrast_factor=1.5):
+    contrast_factor = tf.random.uniform((), minval=1.0, maxval=max_contrast_factor, dtype=tf.float32)
+    image = tf.image.adjust_contrast(image, contrast_factor)
+    image = tf.clip_by_value(image, 0.0, 1.0)  # Ensure values are in [0, 1]
+    return image
 
 def process_image(x):
     """Reads the file as a sequence of bytes and converts it
@@ -100,23 +123,54 @@ def process_image(x):
     img = img / 255
     return img
 
+def augment_image(x):
+    """Reads the file as a sequence of bytes and converts it
+    into a grayscale JPG image normalized in [0,1], then augments it
+
+    Args:
+        x (str): path to the image
+
+    Returns:
+        img: processed image
+    """
+    byte_img = tf.io.read_file(x)
+    img = tf.io.decode_jpeg(byte_img)
+    img = tf.image.rgb_to_grayscale(img)
+    img = img / 255
+
+    img = apply_noise(img)
+    img = apply_brightness(img)
+    img = apply_contrast(img)
+    
+    img = tf.squeeze(img, axis=-1)
+    return img
 
 # Create train, test, val datasets and process the images
 train_images = tf.data.Dataset.list_files(
     input_path + "/images/train/*.jpg", shuffle=False
-)
-train_images = train_images.map(process_image)
+).map(process_image)
 test_images = tf.data.Dataset.list_files(
     input_path + "/images/test/*.jpg", shuffle=False
-)
-test_images = test_images.map(process_image)
-val_images = tf.data.Dataset.list_files(input_path + "/images/val/*.jpg", shuffle=False)
-val_images = val_images.map(process_image)
+).map(process_image)
+val_images = tf.data.Dataset.list_files(
+    input_path + "/images/val/*.jpg", shuffle=False
+).map(process_image)
+
+aug_train_images = tf.data.Dataset.list_files(
+    input_path + "/images/train/*.jpg", shuffle=False
+).map(augment_image)
+aug_test_images = tf.data.Dataset.list_files(
+    input_path + "/images/test/*.jpg", shuffle=False
+).map(augment_image)
+aug_val_images = tf.data.Dataset.list_files(
+    input_path + "/images/val/*.jpg", shuffle=False
+).map(augment_image)
 
 # Processing the fixed image
 fixed_image = tf.data.Dataset.list_files(fixed_image_path, shuffle=False)
 fixed_image = fixed_image.map(process_image)
 
+ 
 
 # =========== Labels =========== #
 def load_labels(path):
@@ -159,9 +213,10 @@ fixed_label = tf.data.Dataset.list_files(fixed_label_path, shuffle=False)
 fixed_label = fixed_label.map(lambda x: tf.py_function(load_labels, [x], [tf.float16]))
 
 # =========== Combine Images and Labels =========== #
-train_dataset = tf.data.Dataset.zip((train_images, train_labels)).shuffle(1000)
-test_dataset = tf.data.Dataset.zip((test_images, test_labels)).shuffle(1000)
-val_dataset = tf.data.Dataset.zip((val_images, val_labels)).shuffle(1000)
+train_dataset = tf.data.Dataset.zip((train_images, train_labels)).concatenate(tf.data.Dataset.zip((aug_train_images, train_labels))).shuffle(1000)
+test_dataset = tf.data.Dataset.zip((train_images, train_labels)).concatenate(tf.data.Dataset.zip((aug_test_images, test_labels))).shuffle(1000)
+val_dataset = tf.data.Dataset.zip((train_images, train_labels)).concatenate(tf.data.Dataset.zip((aug_val_images, val_labels))).shuffle(1000)
+
 
 fixed_dataset = tf.data.Dataset.zip((fixed_image, fixed_label))
 
@@ -431,7 +486,8 @@ reduce_lr = ReduceLROnPlateau(
     min_lr=RLR_MIN,
     amsgrad=False,
 )
-
+early_stopping = EarlyStopping(monitor='val_loss', patience=10, verbose=1, mode='min', restore_best_weights=True)
+callbacks = [reduce_lr, early_stopping]
 
 adam = tf.keras.optimizers.Adam(
     learning_rate=LR, beta_1=BETA_1, beta_2=BETA_2, epsilon=EPSILON
@@ -447,7 +503,7 @@ if TRAINING:
         train_images_dataset,
         epochs=EPOCHS,
         validation_data=val_images_dataset,
-        callbacks=[reduce_lr],
+        callbacks = callbacks
     )
 
     # Save the model
@@ -744,3 +800,4 @@ for ax in axs.flat:
 
 plt.tight_layout()
 plt.savefig("results.png")
+plt.close()
