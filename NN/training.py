@@ -44,10 +44,15 @@ for gpu in physical_devices:
 ######################################## HYPERPARAMETERS AND OTHER OPTIONS ########################################
 
 # Dataset path
-input_path = "/mnt/c/Users/jacop/Desktop/processed_dataset"
+# input_path = "/mnt/c/Users/jacop/Desktop/processed_dataset"
+input_path = (
+    "/mnt/c/Users/vitto/Desktop/DL project/Dl project github/processed_dataset1"
+)
 if not os.path.exists(input_path):
-    input_path = input("Cannot find the dataset path provided in the script.\n"
-                       "Please input a valid path: ")
+    input_path = input(
+        "Cannot find the dataset path provided in the script.\n"
+        "Please input a valid path: "
+    )
 
 # Chose the fixed image-label pair you want to train on
 fixed_image_path = "fixed_img.jpg"
@@ -57,9 +62,12 @@ fixed_label_path = "fixed_lab.txt"
 TRAINING = False
 
 # Choose the name of the model to save/load
-MODEL_NAME = "pen07.keras"
-DISPLACEMENT_MODEL_NAME ="disp_pen07.keras"
-TRAINING_HISTORY = "pen07_history.pickle"
+saving_name = "pen07"
+
+MODEL_NAME = f"{saving_name}.keras"
+DISPLACEMENT_MODEL_NAME = f"disp_{saving_name}.keras"
+TRAINING_HISTORY = f"{saving_name}_history.pickle"
+
 
 # Training hyperparameters
 BATCH_SIZE = 3
@@ -112,6 +120,7 @@ print("Started dataset loading...")
 
 # =========== Functions =========== #
 
+
 def process_image(x):
     """Reads the file as a sequence of bytes and converts it
     into a grayscale JPG image normalized in [0,1]
@@ -128,6 +137,7 @@ def process_image(x):
     img = tf.squeeze(img, axis=-1)
     img = img / 255
     return img
+
 
 def load_labels(path):
     """
@@ -157,11 +167,15 @@ def apply_brightness(image, max_delta=0.2):
     image = tf.clip_by_value(image, 0.0, 1.0)
     return image
 
+
 def apply_contrast(image, max_contrast_factor=1.5):
-    contrast_factor = tf.random.uniform((), minval=1.0, maxval=max_contrast_factor, dtype=tf.float32)
+    contrast_factor = tf.random.uniform(
+        (), minval=1.0, maxval=max_contrast_factor, dtype=tf.float32
+    )
     image = tf.image.adjust_contrast(image, contrast_factor)
     image = tf.clip_by_value(image, 0.0, 1.0)
     return image
+
 
 def augment_image(x):
     """Reads the file as a sequence of bytes and converts it
@@ -180,9 +194,10 @@ def augment_image(x):
 
     img = apply_brightness(img)
     img = apply_contrast(img)
-    
+
     img = tf.squeeze(img, axis=-1)
     return img
+
 
 # =========== Images =========== #
 
@@ -235,9 +250,21 @@ fixed_label = tf.data.Dataset.list_files(fixed_label_path, shuffle=False).map(
 # =========== Combine Images and Labels =========== #
 
 # The new dataset has also the augmented images
-train_dataset = tf.data.Dataset.zip((train_images, train_labels)).concatenate(tf.data.Dataset.zip((aug_train_images, train_labels))).shuffle(1000)
-test_dataset = tf.data.Dataset.zip((train_images, train_labels)).concatenate(tf.data.Dataset.zip((aug_test_images, test_labels))).shuffle(1000)
-val_dataset = tf.data.Dataset.zip((train_images, train_labels)).concatenate(tf.data.Dataset.zip((aug_val_images, val_labels))).shuffle(1000)
+train_dataset = (
+    tf.data.Dataset.zip((train_images, train_labels))
+    .concatenate(tf.data.Dataset.zip((aug_train_images, train_labels)))
+    .shuffle(1000)
+)
+test_dataset = (
+    tf.data.Dataset.zip((train_images, train_labels))
+    .concatenate(tf.data.Dataset.zip((aug_test_images, test_labels)))
+    .shuffle(1000)
+)
+val_dataset = (
+    tf.data.Dataset.zip((train_images, train_labels))
+    .concatenate(tf.data.Dataset.zip((aug_val_images, val_labels)))
+    .shuffle(1000)
+)
 
 fixed_dataset = tf.data.Dataset.zip((fixed_image, fixed_label))
 
@@ -348,25 +375,49 @@ input = tf.keras.layers.Input(shape=input_shape)
 ### Encoder ###
 
 a1 = tf.keras.layers.LeakyReLU(alpha=LRELU_ALPHA)(input)
-c1 = tf.keras.layers.Conv2D(64, 3, padding="same", kernel_initializer="he_normal", kernel_regularizer=regularizers.l2(L2REG))(a1)
+c1 = tf.keras.layers.Conv2D(
+    64,
+    3,
+    padding="same",
+    kernel_initializer="he_normal",
+    kernel_regularizer=regularizers.l2(L2REG),
+)(a1)
 bn1 = tf.keras.layers.BatchNormalization()(c1)
 c1 = tf.keras.layers.Dropout(0.1)(c1)
 p1 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(c1)
 
 a2 = tf.keras.layers.LeakyReLU(alpha=LRELU_ALPHA)(p1)
-c2 = tf.keras.layers.Conv2D(128, 3, padding="same", kernel_initializer="he_normal", kernel_regularizer=regularizers.l2(L2REG))(a2)
+c2 = tf.keras.layers.Conv2D(
+    128,
+    3,
+    padding="same",
+    kernel_initializer="he_normal",
+    kernel_regularizer=regularizers.l2(L2REG),
+)(a2)
 bn2 = tf.keras.layers.BatchNormalization()(c2)
 c2 = tf.keras.layers.Dropout(0.1)(c2)
 p2 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(c2)
 
 a3 = tf.keras.layers.LeakyReLU(alpha=LRELU_ALPHA)(p2)
-c3 = tf.keras.layers.Conv2D(256, 3, padding="same", kernel_initializer="he_normal", kernel_regularizer=regularizers.l2(L2REG),)(a3)
+c3 = tf.keras.layers.Conv2D(
+    256,
+    3,
+    padding="same",
+    kernel_initializer="he_normal",
+    kernel_regularizer=regularizers.l2(L2REG),
+)(a3)
 bn3 = tf.keras.layers.BatchNormalization()(c3)
 c3 = tf.keras.layers.Dropout(0.2)(c3)
 p3 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(c3)
 
 a4 = tf.keras.layers.LeakyReLU(alpha=LRELU_ALPHA)(p3)
-c4 = tf.keras.layers.Conv2D(512, 3, padding="same", kernel_initializer="he_normal", kernel_regularizer=regularizers.l2(L2REG))(a4)
+c4 = tf.keras.layers.Conv2D(
+    512,
+    3,
+    padding="same",
+    kernel_initializer="he_normal",
+    kernel_regularizer=regularizers.l2(L2REG),
+)(a4)
 bn4 = tf.keras.layers.BatchNormalization()(c4)
 c4 = tf.keras.layers.Dropout(0.2)(c4)
 p4 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(c4)
@@ -374,7 +425,13 @@ p4 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(c4)
 ### Bottleneck ###
 
 a5 = tf.keras.layers.LeakyReLU(alpha=LRELU_ALPHA)(p4)
-c5 = tf.keras.layers.Conv2D(1024, 3, padding="same", kernel_initializer="he_normal", kernel_regularizer=regularizers.l2(L2REG))(a5)
+c5 = tf.keras.layers.Conv2D(
+    1024,
+    3,
+    padding="same",
+    kernel_initializer="he_normal",
+    kernel_regularizer=regularizers.l2(L2REG),
+)(a5)
 bn5 = tf.keras.layers.BatchNormalization()(c5)
 c5 = tf.keras.layers.Dropout(0.3)(c5)
 
@@ -424,7 +481,9 @@ def extract_moving_img(input):
     """
     return input[:, :, :, 1:2]
 
+
 moving_image = tf.keras.layers.Lambda(extract_moving_img)(input)
+
 
 def apply_deformation(inputs):
     """
@@ -450,11 +509,15 @@ output = def_image
 # =========== Model Initialization =========== #
 unet = tf.keras.Model(inputs=input, outputs=output)
 
+
 def custom_loss(y_true, y_pred):
     mse = tf.keras.losses.MeanSquaredError()(y_true, y_pred)
-    laplacian = tf.reduce_mean(tf.abs(tf.image.image_gradients(tf.expand_dims(y_pred, axis=-1))))
+    laplacian = tf.reduce_mean(
+        tf.abs(tf.image.image_gradients(tf.expand_dims(y_pred, axis=-1)))
+    )
     total_loss = mse + LAPL_COEF * laplacian
     return total_loss
+
 
 # Define the callback to reduce the learning rate when the validation loss stops improving
 reduce_lr = ReduceLROnPlateau(
@@ -466,7 +529,13 @@ reduce_lr = ReduceLROnPlateau(
 )
 
 # Implement Early Stopping callback
-early_stopping = EarlyStopping(monitor='val_loss', patience=ES_PATIENCE, verbose=1, mode='min', restore_best_weights=True)
+early_stopping = EarlyStopping(
+    monitor="val_loss",
+    patience=ES_PATIENCE,
+    verbose=1,
+    mode="min",
+    restore_best_weights=True,
+)
 callbacks = [reduce_lr, early_stopping]
 
 adam = tf.keras.optimizers.Adam(
@@ -497,7 +566,9 @@ if TRAINING:
 
 
 # Load a pretrained model
-unet = tf.keras.models.load_model(MODEL_NAME, safe_mode=False, custom_objects={"custom_loss": custom_loss})
+unet = tf.keras.models.load_model(
+    MODEL_NAME, safe_mode=False, custom_objects={"custom_loss": custom_loss}
+)
 # Load the training history
 with open(TRAINING_HISTORY, "rb") as file_pi:
     history = pickle.load(file_pi)
@@ -572,7 +643,10 @@ fixed_to_moving = tfa.image.dense_image_warp(fixed_image_expanded, -inverse_tran
 # =========== Adding Landmarks and ROI =========== #
 fixed_labels = fixed_dataset.as_numpy_iterator().next()[1][0]
 
-def plot_with_landmarks_and_ROI(ax, image, deformed_landmarks, true_landmarks, bbox_size=15):
+
+def plot_with_landmarks_and_ROI(
+    ax, image, deformed_landmarks, true_landmarks, bbox_size=15
+):
     # Plot the image on the given axis
     ax.imshow(image, cmap="gray")
 
@@ -598,7 +672,6 @@ def plot_with_landmarks_and_ROI(ax, image, deformed_landmarks, true_landmarks, b
     # Set axis limits to ensure landmarks and bounding boxes are visible
     ax.set_xlim(0, image.shape[1])
     ax.set_ylim(image.shape[0], 0)
-
 
 
 def deform_landmarks(landmarks, displacement_field):
@@ -627,6 +700,7 @@ def deform_landmarks(landmarks, displacement_field):
 
         deformed_landmarks.extend([new_x, new_y])
     return np.array(deformed_landmarks)
+
 
 # Deform the landmarks of the fixed img onto the moving one
 deformed_landmarks = deform_landmarks(fixed_labels, inverse_transform)
