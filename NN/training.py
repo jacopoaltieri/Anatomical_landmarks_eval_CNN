@@ -54,10 +54,11 @@ fixed_image_path = "fixed_img.jpg"
 fixed_label_path = "fixed_lab.txt"
 
 # Choose if the model should be trained
-TRAINING = True
+TRAINING = False
 
 # Choose the name of the model to save/load
 MODEL_NAME = "pen07.keras"
+DISPLACEMENT_MODEL_NAME ="disp_pen07.keras"
 TRAINING_HISTORY = "pen07_history.pickle"
 
 # Training hyperparameters
@@ -546,6 +547,9 @@ test_feed = tf.expand_dims(test_feed, axis=0)
 displacement_model = tf.keras.Model(
     inputs=unet.input, outputs=unet.get_layer("disp").output
 )
+displacement_model.save(DISPLACEMENT_MODEL_NAME)
+print("Displacement model saved as", DISPLACEMENT_MODEL_NAME)
+
 displacement_field = displacement_model.predict(test_feed)
 
 # Expand the images to match displacement_field dimensions
