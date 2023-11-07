@@ -51,23 +51,33 @@ input_path = (
 if not os.path.exists(input_path):
     input_path = input(
         "Cannot find the dataset path provided in the script.\n"
-        "Please input a valid path: "
+        "Please input a valid path:"
     )
+
+
+# Choose the name of the model to save/load
+saving_name = "pen06"
+
+MODEL_NAME = f"{saving_name}.keras"
+DISPLACEMENT_MODEL_NAME = f"disp_{saving_name}.keras"
+TRAINING_HISTORY = f"{saving_name}_history.pickle"
+
+# Creating results folder
+results_folder = f"{saving_name}_results"
+results_directory = os.path.join(os.getcwd(), results_folder)
+
+if not os.path.exists(results_directory):
+    os.mkdir(results_directory)
+    print(f"Folder '{results_folder}' created succesfully in {os.getcwd()}\n")
+else:
+    print(f"Folder '{results_folder}' already exists in {os.getcwd()}\n")
 
 # Chose the fixed image-label pair you want to train on
 fixed_image_path = "fixed_img.jpg"
 fixed_label_path = "fixed_lab.txt"
 
 # Choose if the model should be trained
-TRAINING = False
-
-# Choose the name of the model to save/load
-saving_name = "pen07"
-
-MODEL_NAME = f"{saving_name}.keras"
-DISPLACEMENT_MODEL_NAME = f"disp_{saving_name}.keras"
-TRAINING_HISTORY = f"{saving_name}_history.pickle"
-
+TRAINING = True
 
 # Training hyperparameters
 BATCH_SIZE = 3
@@ -76,7 +86,7 @@ LRELU_ALPHA = 0.01  # alpha coefficient of LeakyReLU
 L2REG = 0.0001  # kernel regularizer coefficient
 
 # Loss laplacian penalization coefficient
-LAPL_COEF = 0.7
+LAPL_COEF = 0.6
 
 # Adam hyperparameters
 LR = 0.0001
@@ -98,6 +108,7 @@ print(
     f"Training mode: {TRAINING}\n"
     f"Model name: {MODEL_NAME}\n"
     f"Training history name: {TRAINING_HISTORY}\n"
+    f"Displacement model name:{DISPLACEMENT_MODEL_NAME}\n"
     f"Batch size: {BATCH_SIZE}\n"
     f"Epochs: {EPOCHS}\n"
     f"LeakyReLU alpha: {LRELU_ALPHA}\n"
@@ -160,8 +171,21 @@ def load_labels(path):
     return np.array(landmarks)
 
 
-# For augmentation
+# Data augmentation
 def apply_brightness(image, max_delta=0.2):
+    """
+    Apply random brightness adjustment to an image within a specified range.
+
+    Args:
+        image (tf.Tensor): Input image to which brightness adjustment is applied.
+        max_delta (float): Maximum absolute value of the random brightness
+            adjustment delta. Range within which the brightness of
+            the image can be modified.
+
+    Returns:
+        tf.Tensor: The image with the applied brightness adjustment, clipped to
+        the valid range of [0.0, 1.0]
+    """
     delta = tf.random.uniform((), minval=-max_delta, maxval=max_delta)
     image = tf.image.adjust_brightness(image, delta)
     image = tf.clip_by_value(image, 0.0, 1.0)
@@ -169,6 +193,18 @@ def apply_brightness(image, max_delta=0.2):
 
 
 def apply_contrast(image, max_contrast_factor=1.5):
+    """
+    Apply random contrast adjustment to an image within a specified range.
+
+    Args:
+        image (tf.Tensor): Input image to which contrast adjustment is applied.
+        max_contrast_factor (float): Maximum contrast adjustment factor. Upper limit
+        of the random scaling applied to the image's contrast.
+
+    Returns:
+        tf.Tensor: The image with the applied contrast adjustment, clipped to the
+        valid range of [0.0, 1.0].
+    """
     contrast_factor = tf.random.uniform(
         (), minval=1.0, maxval=max_contrast_factor, dtype=tf.float32
     )
@@ -511,6 +547,20 @@ unet = tf.keras.Model(inputs=input, outputs=output)
 
 
 def custom_loss(y_true, y_pred):
+    """
+    Calculate the custom loss function.
+
+    This loss function combines Mean Squared Error (MSE) loss with a Laplacian
+    regularization term to encourage smoothness in the predicted output. The loss
+    consists of two components: MSE and Laplacian.
+
+    Args:
+        y_true (tf.Tensor): True target values.
+        y_pred (tf.Tensor): Predicted values by the model.
+
+    Returns:
+        tf.Tensor: The total loss, which is the sum of MSE and Laplacian regularization.
+    """
     mse = tf.keras.losses.MeanSquaredError()(y_true, y_pred)
     laplacian = tf.reduce_mean(
         tf.abs(tf.image.image_gradients(tf.expand_dims(y_pred, axis=-1)))
@@ -546,6 +596,7 @@ unet.compile(optimizer=adam, loss="mse", metrics="mse")
 
 
 # =========== Model Training =========== #
+
 if TRAINING:
     print("Training the model...")
     history = unet.fit(
@@ -580,9 +631,11 @@ plt.title("Mean Squared Error")
 plt.ylabel("MSE")
 plt.xlabel("Epoch")
 plt.legend(["Train", "Validation"], loc="upper left")
-plt.savefig("mse.png")
+plot_name = f"mse_{saving_name}.png"
+saving_path = os.path.join(results_directory, plot_name)
+plt.savefig(saving_path)
 plt.close()
-print(f"Plot saved as {os.getcwd()}'/mse.png'")
+print(f"Plot saved as {saving_path}")
 
 # Plot training & validation loss values
 plt.plot(history["loss"])
@@ -591,9 +644,11 @@ plt.title("Model Loss")
 plt.ylabel("Loss")
 plt.xlabel("Epoch")
 plt.legend(["Train", "Validation"], loc="upper left")
-plt.savefig("loss.png")
+plot_name = f"loss_{saving_name}.png"
+saving_path = os.path.join(results_directory, plot_name)
+plt.savefig(saving_path)
 plt.close()
-print(f"Plot saved as {os.getcwd()}'/loss.png'")
+print(f"Plot saved as {saving_path}")
 
 
 ######################################## RESULTS #######################################################
@@ -647,6 +702,20 @@ fixed_labels = fixed_dataset.as_numpy_iterator().next()[1][0]
 def plot_with_landmarks_and_ROI(
     ax, image, deformed_landmarks, true_landmarks, bbox_size=15
 ):
+    """
+    Plot an image with deformed landmarks, true landmarks, and bounding boxes.
+
+    Args:
+        ax (matplotlib.axes.Axes): The axis on which the image and landmarks will be plotted.
+        image (numpy.ndarray): The image to be displayed.
+        deformed_landmarks (numpy.ndarray): The deformed landmarks to be visualized.
+        true_landmarks (numpy.ndarray): The true landmarks to be visualized.
+        bbox_size (int, optional): The size of the bounding boxes around deformed landmarks.
+            Default is 15.
+
+    Returns:
+        None
+    """
     # Plot the image on the given axis
     ax.imshow(image, cmap="gray")
 
@@ -708,7 +777,6 @@ deformed_landmarks = deform_landmarks(fixed_labels, inverse_transform)
 
 # =========== Plotting the results =========== #
 
-
 fig, axs = plt.subplots(2, 4, figsize=(20, 10))
 fig.suptitle("Image Transformations")
 
@@ -752,5 +820,8 @@ for ax in axs.flat:
     ax.label_outer()
 
 plt.tight_layout()
-plt.savefig("results.png")
+plot_name = f"results_{saving_name}.png"
+saving_path = os.path.join(results_directory, plot_name)
+plt.savefig(saving_path)
 plt.close()
+print(f"Plot saved as {saving_path}.")
