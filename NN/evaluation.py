@@ -120,9 +120,11 @@ def deform_landmarks(landmarks, displacement_field):
     return np.array(deformed_landmarks)
 
 
-######################################## MAIN ########################################
+######################################## PARAMETERS ########################################
 
-input_folder = input("Dataset you want to analyze:")
+input_folder='/mnt/c/Users/jacop/Desktop/DL_Project/processed_dataset'
+
+#input_folder = input("Dataset you want to analyze:")
 output_folder = os.getcwd()+"/model_output"
 
 # Chose the reference fixed image-label pair
@@ -131,33 +133,41 @@ fixed_label_path = "fixed_lab.txt"
 
 model_name = "disp_pen07.keras"
 
-# TODO: LOAD ALL IMAGES AND PROCESS THEM
+
+######################################## MAIN ########################################
+
+os.makedirs(output_folder, exist_ok=True)
+
+displacement_model = tf.keras.models.load_model(model_name, safe_mode=False)
+
+images = glob.glob(os.path.join(input_folder, '**/*.jpg'), recursive=True)
+
 
 # Processing the fixed data
 fixed_image = process_image(fixed_image_path)
 fixed_landmarks = load_labels(fixed_label_path)
 
 
-# ???????
-for image_filename in tqdm(img_files):
-    moving_image = process_image(image_filename)
+for image in tqdm(images):
+    moving_image = process_image(image)
+    # Get the filename without extension
+    filename = os.path.splitext(os.path.basename(image))[0]
     
+
     # Stack tensors to obtain the correct input for the displacement model
     input = tf.stack([fixed_image, moving_image], -1)
     input = tf.expand_dims(input, axis=0)
     
     displacement_field = displacement_model.predict(input, verbose = 0)
-    inverse_displacement = -displacement_field
+    inverse_displacement = -displacement_field    
     
     # deforming the fixed landmarks onto the moving image (inverse_displacement)
     deformed_landmarks = deform_landmarks(fixed_landmarks,inverse_displacement)
     
-    # Define the output image filename by extracting the base name from the input image filename
-    output_image_filename = os.path.join(output_image_folder, os.path.basename(image_filename))
+    # Construct the output path with the same filename
+    output_path = os.path.join(output_folder, f'{filename}.jpg')
+    
 
-    # Call the modified plot_with_landmarks_and_ROI function to plot and save the image
-    plot_with_landmarks_and_ROI(moving_image, deformed_landmarks, output_image_filename)
+#     #TODO: PLOT AND SAVE THE IMAGES IN OUTPUT FOLDER/IMAGES
     
-    #TODO: SAVE THE IMAGES IN OUTPUT FOLDER/IMAGES
-    
-# TODO: WRITE BBOX COORDS IN TXT FILES
+# # TODO: WRITE BBOX COORDS IN TXT FILES: landmark x y bboxsize
