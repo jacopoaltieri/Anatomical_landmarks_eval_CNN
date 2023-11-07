@@ -3,7 +3,7 @@ AUTHORS: Altieri J. , Mazzini V.
 
 This program will train a U-Net to do a coarse detection of cephalometric landmarks.
 It creates a "displacement field" which performs an elastic deformation of the "moving image"
-onto a fixed one. This also moves the landmarks and their corresponding RoI.
+onto a fixed one. This also moves the landmarks and their corresponding RoIs.
 
 The net architecture is inspired by the one proposed in the following paper:
 https://www.jstage.jst.go.jp/article/transinf/E104.D/8/E104.D_2021EDP7001/_pdf
