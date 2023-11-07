@@ -28,17 +28,14 @@ import tensorflow_addons as tfa
 warnings.resetwarnings()  # restore warnings
 
 
-# Check for GPU availability
+# Check for GPU availability and Avoid OOM errors by setting GPU Memory Consumption Growth
 physical_devices = tf.config.experimental.list_physical_devices("GPU")
 if len(physical_devices) > 0:
     print("We got a GPU!")
-    tf.config.experimental.set_memory_growth(physical_devices[0], True)
+    for gpu in physical_devices:
+        tf.config.experimental.set_memory_growth(gpu, True)
 else:
     print("Sorry, no GPU for you...")
-
-# Avoid OOM errors by setting GPU Memory Consumption Growth
-for gpu in physical_devices:
-    tf.config.experimental.set_memory_growth(gpu, True)
 
 
 ######################################## HYPERPARAMETERS AND OTHER OPTIONS ########################################
