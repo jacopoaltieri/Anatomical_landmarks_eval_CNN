@@ -196,6 +196,12 @@ fixed_label_path = "fixed_lab.txt"
 
 # Choose which model are you trying
 model_name = "disp_pen05.keras"
+if not os.path.exists(model_name):
+    input_path = input(
+        "Cannot find the model path provided in the script.\n"
+        "Please input a valid path:"
+    )
+
 
 ######################################## MAIN ########################################
 
