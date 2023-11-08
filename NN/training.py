@@ -53,7 +53,7 @@ if not os.path.exists(input_path):
 
 
 # Choose the name of the model to save/load
-saving_name = "pen06"
+saving_name = "pen05"
 
 MODEL_NAME = f"{saving_name}.keras"
 DISPLACEMENT_MODEL_NAME = f"disp_{saving_name}.keras"

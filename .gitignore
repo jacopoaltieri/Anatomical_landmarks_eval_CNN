@@ -138,6 +138,3 @@ ui-tests/.pnp.*
 
 # pre-trained models (too large for github)
 **.keras
-
-# other stuff
-/processed_dataset
