@@ -89,7 +89,7 @@ def net_feeder(fixed_image, moving_image):
 
 def plot_with_ROI(image, deformed_landmarks, output_image_filename, bbox_size=15):
     """
-    Plot an image with a Region of Interest (ROI) around the predicted landmark position.
+    Plot and saves an image with a Region of Interest (ROI) around the predicted landmark position.
     Also saves the ROI coordinates to a .txt file.
 
     Args:

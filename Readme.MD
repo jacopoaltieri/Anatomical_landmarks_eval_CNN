@@ -28,7 +28,7 @@ The 14 landmarks to be found by this network are listed below, ordered according
 ## Repository organization
 * **preprocessing_scripts**: contains the preprocessor script: use it if you are willing to work with the original dataset. It will find all the matching image-label pairs and sort them into three categories (train, test, val), after resizing the coordinates to the input size of the CNN.
 
-* **NN**: contains the scripts for training and for predictions, the pre-trained model and its training history. It also contains the image-label pair chosen as the fixed image during training.
+* **NN**: contains the scripts for training and for predictions, the pre-trained model, its training history and the displacement field outputted by the model. It also contains the image-label pair chosen as the fixed image during training.
 
 * **Results**: contains the Loss and Metric plots of the pre-trained model, along with some output examples.
   
@@ -37,6 +37,7 @@ The main directory needs two subfolders called "images" and "labels" respectivel
 
 ## Usage
 The scripts run in **python 3.10.12**, please use this version to ensure compatibility, especially if you wish to use the pre-trained model.
+
 #### Requirements
 - keras==2.14.0
 - matplotlib==3.8.0
@@ -66,10 +67,7 @@ It then deforms the fixed landmark position onto the moving image via the invers
 
 Download the folder *NN*. If you wish to train your own network, use the script "*training.py*"; here you can set the dataset path, the hyperparameters and the name of the saved model. It will output plots for MSE, Loss and an example of deformation.
 
-When you are happy with the results, input the displacement model into the script "*evaluation.py*" and run the model on a full unlabeled dataset. 
-It will output a folder containing the images with the predicted ROIs and .txt files containing their coordinates for each landmark.
-
+When you are happy with the results, input the displacement model into the script "*evaluation.py*" and run the model on a full unlabeled dataset. It will output a folder containing the images with the predicted ROIs and .txt files containing their coordinates for each landmark.
 
 ## References
-
 <a id="1">[1]</a>Song et al., Automatic cephalometric landmark detection on X-ray images using a deep-learning method
