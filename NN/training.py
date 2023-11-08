@@ -5,6 +5,9 @@ This program will train a U-Net to do a coarse detection of cephalometric landma
 It creates a "displacement field" which performs an elastic deformation of the "moving image"
 onto a fixed one. This also moves the landmarks and their corresponding RoIs.
 
+Use this script to train and save the net and to see some results,
+then move to "evaluation.py" for the full pipeline implementation.
+
 The net architecture is inspired by the one proposed in the following paper:
 https://www.jstage.jst.go.jp/article/transinf/E104.D/8/E104.D_2021EDP7001/_pdf
 """
@@ -41,10 +44,7 @@ else:
 ######################################## HYPERPARAMETERS AND OTHER OPTIONS ########################################
 
 # Dataset path
-# input_path = "/mnt/c/Users/jacop/Desktop/processed_dataset"
-input_path = (
-    "/mnt/c/Users/vitto/Desktop/DL project/Dl project github/processed_dataset1"
-)
+input_path = "/mnt/c/Users/jacop/Desktop/processed_dataset"
 if not os.path.exists(input_path):
     input_path = input(
         "Cannot find the dataset path provided in the script.\n"
@@ -548,8 +548,7 @@ def custom_loss(y_true, y_pred):
     Calculate the custom loss function.
 
     This loss function combines Mean Squared Error (MSE) loss with a Laplacian
-    regularization term to encourage smoothness in the predicted output. The loss
-    consists of two components: MSE and Laplacian.
+    regularization term to encourage smoothness in the predicted output.
 
     Args:
         y_true (tf.Tensor): True target values.
