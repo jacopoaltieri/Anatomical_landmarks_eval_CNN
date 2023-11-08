@@ -87,9 +87,7 @@ def net_feeder(fixed_image, moving_image):
     return net_feed
 
 
-def plot_with_landmarks_and_ROI(
-    image, deformed_landmarks, output_image_filename, bbox_size=15
-):
+def plot_with_ROI(image, deformed_landmarks, output_image_filename, bbox_size=15):
     """
     Plot an image with a Region of Interest (ROI) around the predicted landmark position.
     Also saves the ROI coordinates to a .txt file.
@@ -235,6 +233,6 @@ for image in tqdm(images):
     # plt.imsave(output_path, moving_image, cmap="gray")
 
     # Plot and the images with landmarks and ROI
-    plot_with_landmarks_and_ROI(moving_image, deformed_landmarks, output_path)
+    plot_with_ROI(moving_image, deformed_landmarks, output_path)
 
 print(f"Images and labels saved correctly in {output_folder}\n")
