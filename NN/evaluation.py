@@ -4,16 +4,18 @@ AUTHORS: Altieri J. , Mazzini V.
 This code uses the displacement field given by the training.py script and applies it to 
 the whole set of images, saving the images in the "images" folder, with the plotted RoIs, 
 and the corresponding labels in the "labels" folder. The txt files will contain the coordinates 
-of the bounding boxes. 
-
+of the bounding boxes, given as "x, y, bbox_size" for each landmark. 
 """
+
+
+import glob
 import os
 import warnings
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 import numpy as np
 from tqdm import tqdm
-import glob
+
 
 warnings.filterwarnings("ignore")  # suppress tfa deprecated warnings
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # ignore TF unsupported NUMA warnings
@@ -70,7 +72,7 @@ def load_labels(path):
 
 def net_feeder(fixed_image, moving_image):
     """
-    Create a TensorFlow tensor to feed two images into a neural network for processing.
+    Create a TensorFlow tensor to feed two images into the neural network for processing.
 
     Args:
     - fixed_image (tf.Tensor): The fixed image to be processed.
@@ -89,13 +91,14 @@ def plot_with_landmarks_and_ROI(
     image, deformed_landmarks, output_image_filename, bbox_size=15
 ):
     """
-    Plot an image with landmarks and a Region of Interest (ROI) highlighted and saves the results.
+    Plot an image with a Region of Interest (ROI) around the predicted landmark position.
+    Also saves the ROI coordinates to a .txt file.
 
     Args:
         - image (numpy.ndarray): The input image to be plotted.
         - deformed_landmarks (numpy.ndarray): An array of landmarks coordinates to be overlaid on the image.
         - output_image_filename (str): The filename to save the resulting plot.
-        - bbox_size (int, optional): The size of the bounding box around landmarks.
+        - bbox_size (int): The size of the bounding box around landmarks. Default is 15
     """
     fig, ax = plt.subplots()
     ax.imshow(image, cmap="gray")
