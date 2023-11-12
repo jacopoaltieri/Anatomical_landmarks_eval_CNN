@@ -131,7 +131,7 @@ def plot_with_ROI(image, deformed_landmarks, output_image_filename, bbox_size=15
     )
     label_path = os.path.join(labels_folder, label_filename)
     with open(label_path, "w") as file:
-        file.write("\t x \t y \t bbsize \n")
+        file.write("Landmark\t x \t y \t bbsize \n")
         for i in range(0, len(bbox_coords), 4):
             file.write("\t".join(map(str, bbox_coords[i : i + 4])) + "\n")
 
