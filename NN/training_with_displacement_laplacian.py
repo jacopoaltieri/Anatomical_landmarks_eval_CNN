@@ -27,6 +27,7 @@ from keras.callbacks import ReduceLROnPlateau, EarlyStopping
 
 import tensorflow as tf
 import tensorflow_addons as tfa
+import tensorflow_io as tfio
 
 warnings.resetwarnings()  # restore warnings
 
@@ -542,6 +543,13 @@ output = def_image
 # =========== Model Initialization =========== #
 unet = tf.keras.Model(inputs=input, outputs=output)
 
+# Evaluate the "intermediate" displacement output to be used in the loss
+intermediate_displacement_model = tf.keras.Model(
+    inputs=unet.input, outputs=unet.get_layer("disp").output
+)
+intermediate_displacement_model_output = intermediate_displacement_model.predict(train_images_dataset)
+
+
 
 def custom_loss(y_true, y_pred):
     """
@@ -558,10 +566,13 @@ def custom_loss(y_true, y_pred):
         tf.Tensor: The total loss, which is the sum of MSE and Laplacian regularization.
     """
     mse = tf.keras.losses.MeanSquaredError()(y_true, y_pred)
-    laplacian = tf.reduce_mean(
-        tf.abs(tf.image.image_gradients(tf.expand_dims(y_pred, axis=-1)))
-    )
-    total_loss = mse + LAPL_COEF * laplacian
+
+    # Calculate the Laplacian of the predicted displacement field using tfio.experimental.filter.laplacian
+    laplacian = tfio.experimental.filter.laplacian(intermediate_displacement_model_output,ksize=3)
+
+    # Combine the MSE and Laplacian MSE using the Laplacian weight
+    total_loss = mse + (LAPL_COEF * laplacian)
+
     return total_loss
 
 
